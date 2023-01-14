@@ -1,0 +1,6 @@
+bin/
+.vscode/
+*.enc
+*.dec
+*.txt
+*.cnf
