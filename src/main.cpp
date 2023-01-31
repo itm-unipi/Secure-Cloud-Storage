@@ -35,7 +35,7 @@ int encrypt() {
     unsigned char* ciphertext = nullptr;
     unsigned char* iv = nullptr;
     int ciphertext_size = 0;
-    unsigned char *key = (unsigned char *)"0123456789012345";
+    unsigned char *key = (unsigned char *)"01234567890123450123456789012345";
 
     AesCbcCipherBox* encryptor = new AesCbcCipherBox(ENCRYPT, key);
     encryptor->run(plaintext, plaintext_size, ciphertext, ciphertext_size, iv);
@@ -47,8 +47,8 @@ int encrypt() {
     FILE* cphr_file = fopen(cphr_file_name.c_str(), "wb");
     if(!cphr_file) { cerr << "Error: cannot open file '" << cphr_file_name << "' (no permissions?)\n"; exit(1); }
 
-    ret = fwrite(iv, 1, encryptor->getIvSize(), cphr_file);
-    if(ret < encryptor->getIvSize()) { cerr << "Error while writing the file '" << cphr_file_name << "'\n"; exit(1); }
+    ret = fwrite(iv, 1, AesCbcCipherBox::getIvSize(), cphr_file);
+    if(ret < AesCbcCipherBox::getIvSize()) { cerr << "Error while writing the file '" << cphr_file_name << "'\n"; exit(1); }
 
     ret = fwrite(ciphertext, 1, ciphertext_size, cphr_file);
     if(ret < ciphertext_size) { cerr << "Error while writing the file '" << cphr_file_name << "'\n"; exit(1); }
@@ -62,6 +62,8 @@ int encrypt() {
     delete[] iv;
     free(plaintext);
     delete encryptor;
+
+    return 0;
 }
 
 int decrypt() {
@@ -84,8 +86,7 @@ int decrypt() {
     fseek(cphr_file, 0, SEEK_SET);
 
     // declare some useful variables:
-    const EVP_CIPHER* cipher = EVP_aes_128_cbc();
-    int iv_len = EVP_CIPHER_iv_length(cipher);
+    int iv_len = AesCbcCipherBox::getIvSize();
     
     // Allocate buffer for IV, ciphertext, plaintext
     unsigned char* iv = (unsigned char*)malloc(iv_len);
@@ -104,7 +105,7 @@ int decrypt() {
 
     unsigned char* plaintext = nullptr;
     int plaintext_size = 0;
-    unsigned char *key = (unsigned char *)"0123456789012345";
+    unsigned char *key = (unsigned char *)"01234567890123450123456789012345";
 
     AesCbcCipherBox* decryptor = new AesCbcCipherBox(DECRYPT, key);
     decryptor->run(cphr_buf, cphr_size, plaintext, plaintext_size, iv);

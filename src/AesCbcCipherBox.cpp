@@ -29,7 +29,7 @@ int AesCbcCipherBox::initializeEncrypt() {
 
     int ret;
 
-    const EVP_CIPHER* cipher = EVP_aes_128_cbc();
+    const EVP_CIPHER* cipher = EVP_aes_256_cbc();
     m_iv_size = EVP_CIPHER_iv_length(cipher);
     m_iv = new unsigned char[m_iv_size];
     int block_size = EVP_CIPHER_block_size(cipher);
@@ -110,8 +110,7 @@ int AesCbcCipherBox::initializeDecrypt() {
     
     int ret;
 
-    const EVP_CIPHER* cipher = EVP_aes_128_cbc();
-    int block_size = EVP_CIPHER_block_size(cipher);
+    const EVP_CIPHER* cipher = EVP_aes_256_cbc();
     m_plaintext = new unsigned char[m_ciphertext_size];
 
     if (!m_iv || !m_ciphertext || !m_plaintext) { 
@@ -145,6 +144,7 @@ int AesCbcCipherBox::updateDecrypt() {
     }
 
     m_processed_bytes += update_len;
+    return 0;
 }
 
 int AesCbcCipherBox::finalizeDecrypt() {
@@ -161,6 +161,8 @@ int AesCbcCipherBox::finalizeDecrypt() {
 
     EVP_CIPHER_CTX_free(m_ctx);
     delete[] m_iv;
+
+    return 0;
 }
 
 // -----------------------------------------------------------------------
@@ -186,7 +188,7 @@ void AesCbcCipherBox::run(unsigned char* input_buffer, long int input_buffer_siz
         m_ciphertext = input_buffer;
         m_ciphertext_size = input_buffer_size;
         
-        m_iv_size = EVP_CIPHER_iv_length(EVP_aes_128_cbc());
+        m_iv_size = EVP_CIPHER_iv_length(EVP_aes_256_cbc());
         m_iv = new unsigned char[m_iv_size];
         memcpy(m_iv, iv, m_iv_size);
 

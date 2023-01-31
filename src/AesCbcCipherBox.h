@@ -38,7 +38,8 @@ public:
     AesCbcCipherBox(const AesCbcCipherBox&) = delete;
     ~AesCbcCipherBox();
     void run(unsigned char* input_buffer, long int input_buffer_size, unsigned char*& output_buffer, int& output_buffer_size, unsigned char*& iv);
-    int getIvSize() { return m_iv_size; }
+
+    static int getIvSize() { return EVP_CIPHER_iv_length(EVP_aes_256_cbc()); }
 };
 
 #endif  // _AESCBCCIPHERBOX_H
