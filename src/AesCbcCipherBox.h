@@ -23,9 +23,15 @@ class AesCbcCipherBox {
     EVP_CIPHER_CTX* m_ctx;
     int m_processed_bytes;
 
-    int initialize();
-    int update();
-    int finalize();
+    // encrypt methods
+    int initializeEncrypt();
+    int updateEncrypt();
+    int finalizeEncrypt();
+
+    // decrypt methods
+    int initializeDecrypt();
+    int updateDecrypt();
+    int finalizeDecrypt();
 
 public:
     AesCbcCipherBox(uint8_t type, unsigned char* key);
