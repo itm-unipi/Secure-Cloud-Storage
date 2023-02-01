@@ -17,9 +17,9 @@ AesCbcCipherBox::AesCbcCipherBox(uint8_t type, unsigned char* key) {
 
 AesCbcCipherBox::~AesCbcCipherBox() {
     
-    #pragma optimize("", off)
+#pragma optimize("", off)
     memset(m_key, 0, BLOCK_SIZE);
-    #pragma optimize("", on)
+#pragma optimize("", on)
     delete[] m_key;
 }
 
@@ -167,7 +167,11 @@ int AesCbcCipherBox::finalizeDecrypt() {
 
 // -----------------------------------------------------------------------
 
-void AesCbcCipherBox::run(unsigned char* input_buffer, long int input_buffer_size, unsigned char*& output_buffer, int& output_buffer_size, unsigned char*& iv) {
+void AesCbcCipherBox::run(unsigned char* input_buffer, 
+                        long int input_buffer_size, 
+                        unsigned char*& output_buffer, 
+                        int& output_buffer_size, 
+                        unsigned char*& iv) {
     
     if (m_type == ENCRYPT) {
         
