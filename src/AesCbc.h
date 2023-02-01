@@ -1,5 +1,5 @@
-#ifndef _AESCBCCIPHERBOX_H
-#define _AESCBCCIPHERBOX_H
+#ifndef _AesCbc_H
+#define _AesCbc_H
 
 #include <cstdint>
 #include <openssl/evp.h>
@@ -10,7 +10,7 @@
 #define DECRYPT 1
 #define BLOCK_SIZE 256
 
-class AesCbcCipherBox {
+class AesCbc {
 
     uint8_t m_type;
     unsigned char* m_key;
@@ -34,12 +34,12 @@ class AesCbcCipherBox {
     int finalizeDecrypt();
 
 public:
-    AesCbcCipherBox(uint8_t type, unsigned char* key);
-    AesCbcCipherBox(const AesCbcCipherBox&) = delete;
-    ~AesCbcCipherBox();
+    AesCbc(uint8_t type, unsigned char* key);
+    AesCbc(const AesCbc&) = delete;
+    ~AesCbc();
     void run(unsigned char* input_buffer, long int input_buffer_size, unsigned char*& output_buffer, int& output_buffer_size, unsigned char*& iv);
 
     static int getIvSize() { return EVP_CIPHER_iv_length(EVP_aes_256_cbc()); }
 };
 
-#endif  // _AESCBCCIPHERBOX_H
+#endif  // _AesCbc_H

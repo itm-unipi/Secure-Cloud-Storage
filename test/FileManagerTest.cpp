@@ -1,12 +1,12 @@
 #include <iostream>
 #include "../src/FileManager.h"
-#include "../src/AesCbcCipherBox.h"
+#include "../src/AesCbc.h"
 using namespace std;
 
 int main() {
     unsigned char *key = (unsigned char *)"01234567890123450123456789012345";
-    AesCbcCipherBox encryptor(ENCRYPT, key);
-    AesCbcCipherBox decryptor(DECRYPT, key);
+    AesCbc encryptor(ENCRYPT, key);
+    AesCbc decryptor(DECRYPT, key);
 
     FileManager reader("test.txt", READ);
     FileManager writer("test_copy.txt", WRITE);

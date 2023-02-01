@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <iostream> 
 #include <cstring>
-#include "AesCbcCipherBox.h"
+#include "../src/AesCbc.h"
 using namespace std;
 
 int encrypt() {
@@ -37,7 +37,7 @@ int encrypt() {
     int ciphertext_size = 0;
     unsigned char *key = (unsigned char *)"01234567890123450123456789012345";
 
-    AesCbcCipherBox* encryptor = new AesCbcCipherBox(ENCRYPT, key);
+    AesCbc* encryptor = new AesCbc(ENCRYPT, key);
     encryptor->run(plaintext, plaintext_size, ciphertext, ciphertext_size, iv);
 
     // -----------------------------------------------
@@ -47,8 +47,8 @@ int encrypt() {
     FILE* cphr_file = fopen(cphr_file_name.c_str(), "wb");
     if(!cphr_file) { cerr << "Error: cannot open file '" << cphr_file_name << "' (no permissions?)\n"; exit(1); }
 
-    ret = fwrite(iv, 1, AesCbcCipherBox::getIvSize(), cphr_file);
-    if(ret < AesCbcCipherBox::getIvSize()) { cerr << "Error while writing the file '" << cphr_file_name << "'\n"; exit(1); }
+    ret = fwrite(iv, 1, AesCbc::getIvSize(), cphr_file);
+    if(ret < AesCbc::getIvSize()) { cerr << "Error while writing the file '" << cphr_file_name << "'\n"; exit(1); }
 
     ret = fwrite(ciphertext, 1, ciphertext_size, cphr_file);
     if(ret < ciphertext_size) { cerr << "Error while writing the file '" << cphr_file_name << "'\n"; exit(1); }
@@ -86,7 +86,7 @@ int decrypt() {
     fseek(cphr_file, 0, SEEK_SET);
 
     // declare some useful variables:
-    int iv_len = AesCbcCipherBox::getIvSize();
+    int iv_len = AesCbc::getIvSize();
     
     // Allocate buffer for IV, ciphertext, plaintext
     unsigned char* iv = (unsigned char*)malloc(iv_len);
@@ -107,7 +107,7 @@ int decrypt() {
     int plaintext_size = 0;
     unsigned char *key = (unsigned char *)"01234567890123450123456789012345";
 
-    AesCbcCipherBox* decryptor = new AesCbcCipherBox(DECRYPT, key);
+    AesCbc* decryptor = new AesCbc(DECRYPT, key);
     decryptor->run(cphr_buf, cphr_size, plaintext, plaintext_size, iv);
 
     // -----------------------------------------------
