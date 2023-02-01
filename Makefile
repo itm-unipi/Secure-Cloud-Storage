@@ -1,6 +1,6 @@
 CC = g++
 LFLAGS = -Wall -pthread -lssl -lcrypto -std=c++17 -Wno-unknown-pragmas 
-CFLAGS = -Wall -c
+CFLAGS = -Wall -c -Wno-unknown-pragmas 
 
 all: main
 
