@@ -9,6 +9,6 @@ make
 Per avviare i test:
 
 ```bash
-chmod +x test.sh
-./test.sh
+chmod +x script/test.sh
+script/test.sh
 ```
