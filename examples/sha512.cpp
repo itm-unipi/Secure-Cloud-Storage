@@ -13,13 +13,13 @@ int main() {
     EVP_MD_CTX* ctx;
 
     /* Buffer allocation for the digest */
-    digest = (unsigned char*)malloc(EVP_MD_size(EVP_sha256()));
+    digest = (unsigned char*)malloc(EVP_MD_size(EVP_sha512()));
 
     /* Context allocation */
     ctx = EVP_MD_CTX_new();
 
     /* Hashing (initialization + single update + finalization */
-    EVP_DigestInit(ctx, EVP_sha256());
+    EVP_DigestInit(ctx, EVP_sha512());
     EVP_DigestUpdate(ctx, (unsigned char*)msg, sizeof(msg));
     EVP_DigestFinal(ctx, digest, &digestlen);
 
@@ -36,13 +36,13 @@ int main() {
     EVP_MD_CTX* ctx_2;
 
     /* Buffer allocation for the digest */
-    digest_2 = (unsigned char*)malloc(EVP_MD_size(EVP_sha256()));
+    digest_2 = (unsigned char*)malloc(EVP_MD_size(EVP_sha512()));
 
     /* Context allocation */
     ctx_2 = EVP_MD_CTX_new();
 
     /* Hashing (initialization + single update + finalization */
-    EVP_DigestInit(ctx_2, EVP_sha256());
+    EVP_DigestInit(ctx_2, EVP_sha512());
     EVP_DigestUpdate(ctx_2, (unsigned char*)msg, sizeof(msg));
     EVP_DigestFinal(ctx_2, digest_2, &digestlen_2);
 
@@ -51,7 +51,7 @@ int main() {
     /* Context deallocation */
     EVP_MD_CTX_free(ctx_2);
 
-    if(CRYPTO_memcmp(digest_2, digest, EVP_MD_size(EVP_sha256())) == 0)
+    if(CRYPTO_memcmp(digest_2, digest, EVP_MD_size(EVP_sha512())) == 0)
         cout << "HASH uguali" << endl;
     else
         cerr << "HASH diversi" << endl;
