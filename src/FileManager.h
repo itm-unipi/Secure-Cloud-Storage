@@ -19,6 +19,7 @@ class FileManager {
 
 public:
     FileManager(std::string filename, uint8_t open_type);
+    FileManager(const FileManager&) = delete;
     ~FileManager();
 
     int readChunk(uint8_t* buffer, size_t size);
