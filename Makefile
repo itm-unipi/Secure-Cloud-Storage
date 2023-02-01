@@ -7,8 +7,8 @@ all: main
 main: main.o AesCbcCipherBox.o
 	$(CC) -o bin/main bin/main.o bin/AesCbcCipherBox.o $(LFLAGS)
 
-fileManagerTest: fileManagerTest.o FileManager.o
-	$(CC) -o bin/fileManagerTest bin/fileManagerTest.o bin/FileManager.o $(LFLAGS)
+fileManagerTest: fileManagerTest.o FileManager.o AesCbcCipherBox.o
+	$(CC) -o bin/fileManagerTest bin/fileManagerTest.o bin/FileManager.o bin/AesCbcCipherBox.o $(LFLAGS)
 
 main.o:
 	$(CC) -o bin/main.o src/main.cpp $(CFLAGS)
