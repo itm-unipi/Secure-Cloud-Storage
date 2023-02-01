@@ -42,7 +42,7 @@ int main() {
     ctx_2 = EVP_MD_CTX_new();
 
     /* Hashing (initialization + single update + finalization */
-    EVP_DigestInit(ctx_2, EVP_sha512());    
+    EVP_DigestInit(ctx_2, EVP_sha512());        
     EVP_DigestUpdate(ctx_2, (unsigned char*)msg, sizeof(msg));
     EVP_DigestFinal(ctx_2, digest_2, &digestlen_2);
 
