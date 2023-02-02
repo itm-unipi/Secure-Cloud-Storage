@@ -168,10 +168,10 @@ int AesCbc::finalizeDecrypt() {
 // -----------------------------------------------------------------------
 
 void AesCbc::run(unsigned char* input_buffer, 
-                        long int input_buffer_size, 
-                        unsigned char*& output_buffer, 
-                        int& output_buffer_size, 
-                        unsigned char*& iv) {
+                long int input_buffer_size, 
+                unsigned char*& output_buffer, 
+                int& output_buffer_size, 
+                unsigned char*& iv) {
     
     if (m_type == ENCRYPT) {
         

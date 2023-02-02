@@ -1,5 +1,5 @@
-#ifndef _AesCbc_H
-#define _AesCbc_H
+#ifndef _AESCBC_H
+#define _AESCBC_H
 
 #include <cstdint>
 #include <openssl/evp.h>
@@ -42,4 +42,4 @@ public:
     static int getIvSize() { return EVP_CIPHER_iv_length(EVP_aes_256_cbc()); }
 };
 
-#endif  // _AesCbc_H
+#endif  // _AESCBC_H
