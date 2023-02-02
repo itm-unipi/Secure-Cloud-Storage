@@ -13,11 +13,14 @@ fileManagerTest:  FileManager.o AesCbc.o
 sha512test: Sha512.o
 	$(CC) -o bin/sha512test bin/Sha512.o test/Sha512Test.cpp $(LFLAGS)
 
-hmactest: Hmac.o
+hmacTest: Hmac.o
 	$(CC) -o bin/hmactest bin/Hmac.o test/HmacTest.cpp $(LFLAGS)
 
 signatureTest: DigitalSignature.o
 	$(CC) -o bin/signatureTest bin/DigitalSignature.o test/DigitalSignatureTest.cpp $(LFLAGS)
+
+certificateTest:
+	$(CC) -o bin/certificateTest examples/certificate.cpp $(LFLAGS)
 
 AesCbc.o:
 	$(CC) -o bin/AesCbc.o src/AesCbc.cpp $(CFLAGS)
