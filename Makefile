@@ -16,6 +16,9 @@ sha512test: Sha512.o
 hmactest: Hmac.o
 	$(CC) -o bin/hmactest bin/Hmac.o test/HmacTest.cpp $(LFLAGS)
 
+signatureTest: DigitalSignature.o
+	$(CC) -o bin/signatureTest bin/DigitalSignature.o test/DigitalSignatureTest.cpp $(LFLAGS)
+
 AesCbc.o:
 	$(CC) -o bin/AesCbc.o src/AesCbc.cpp $(CFLAGS)
 
@@ -27,6 +30,9 @@ Sha512.o:
 
 Hmac.o:
 	$(CC) -o bin/Hmac.o src/Hmac.cpp $(CFLAGS)
+
+DigitalSignature.o:
+	$(CC) -o bin/DigitalSignature.o src/DigitalSignature.cpp $(CFLAGS)
 
 clean:
 	rm bin/*
