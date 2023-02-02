@@ -18,6 +18,7 @@ int main() {
         if (i == reader.getNumOfChunks() - 1)
             chunk_size = reader.getLastChunkSize();
 
+        unsigned char* plaintext = nullptr;
         unsigned char* ciphertext = nullptr;
         unsigned char* iv = nullptr;
         int ciphertext_size = 0;
@@ -25,9 +26,10 @@ int main() {
 
         reader.readChunk(buffer, chunk_size);
         encryptor.run(buffer, chunk_size, ciphertext, ciphertext_size, iv);
-        decryptor.run(ciphertext, ciphertext_size, buffer, plaintext_size, iv);
-        writer.writeChunk(buffer, plaintext_size);
+        decryptor.run(ciphertext, ciphertext_size, plaintext, plaintext_size, iv);
+        writer.writeChunk(plaintext, plaintext_size);
 
+        delete[] plaintext;
         delete[] ciphertext;
         delete[] iv;
 

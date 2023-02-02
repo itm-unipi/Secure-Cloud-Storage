@@ -17,5 +17,6 @@ int main() {
     else
         cerr << "HMAC diversi" << endl;
 
+    delete[] digest;
     return 0;
 }

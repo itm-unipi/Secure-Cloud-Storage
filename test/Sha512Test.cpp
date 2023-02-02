@@ -15,5 +15,6 @@ int main() {
     else
         cerr << "HASH diversi" << endl;
 
+    delete[] digest;
     return 0;
 }
