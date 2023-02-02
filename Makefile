@@ -19,8 +19,8 @@ hmacTest: Hmac.o
 signatureTest: DigitalSignature.o
 	$(CC) -o bin/signatureTest bin/DigitalSignature.o test/DigitalSignatureTest.cpp $(LFLAGS)
 
-certificateTest:
-	$(CC) -o bin/certificateTest examples/certificate.cpp $(LFLAGS)
+certificateTest: CertificateStore.o
+	$(CC) -o bin/certificateTest bin/CertificateStore.o test/CertificateStoreTest.cpp $(LFLAGS)
 
 AesCbc.o:
 	$(CC) -o bin/AesCbc.o src/AesCbc.cpp $(CFLAGS)
@@ -36,6 +36,9 @@ Hmac.o:
 
 DigitalSignature.o:
 	$(CC) -o bin/DigitalSignature.o src/DigitalSignature.cpp $(CFLAGS)
+
+CertificateStore.o:
+	$(CC) -o bin/CertificateStore.o src/CertificateStore.cpp $(CFLAGS)
 
 clean:
 	rm bin/*

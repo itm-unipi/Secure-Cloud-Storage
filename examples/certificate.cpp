@@ -70,6 +70,9 @@ int main() {
         exit(1); 
     }
 
+    X509_free(ca_certificate);
+    X509_CRL_free(crl);
+
     // load the peer's certificate:
     string certificate_filename = "resources/certificates/Server_certificate.pem";
     FILE* certificate_file = fopen(certificate_filename.c_str(), "r");
@@ -119,8 +122,8 @@ int main() {
     // deallocate data:
     X509_free(certificate);
     X509_STORE_free(store);
-    X509_free(ca_certificate);
-    X509_CRL_free(crl);
+    //X509_free(ca_certificate);
+    //X509_CRL_free(crl);
     X509_STORE_CTX_free(certificate_verify_ctx);
 
     return 0;
