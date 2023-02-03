@@ -1,8 +1,8 @@
 #include <iostream>
 #include <openssl/pem.h>
 
-#include "../src/CertificateStore.h"
-// #include "../src/DigitalSignature.h"
+#include "../src/security/CertificateStore.h"
+// #include "../src/security/DigitalSignature.h"
 
 using namespace std;
 

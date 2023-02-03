@@ -2,7 +2,7 @@ CC = g++
 LFLAGS = -Wall -pthread -lssl -lcrypto -std=c++17 -Wno-unknown-pragmas -Wno-deprecated-declarations
 CFLAGS = -Wall -c -Wno-unknown-pragmas -Wno-deprecated-declarations
 
-all: 
+all: aesCbcTest fileManagerTest sha512test hmacTest signatureTest certificateTest diffieHellmanTest
 
 aesCbcTest: AesCbc.o
 	$(CC) -o bin/aesCbcTest bin/AesCbc.o test/AesCbcTest.cpp $(LFLAGS)
@@ -26,25 +26,25 @@ diffieHellmanTest: DiffieHellman.o Sha512.o
 	$(CC) -o bin/diffieHellmanTest bin/DiffieHellman.o bin/Sha512.o test/DiffieHellmanTest.cpp $(LFLAGS)
 
 AesCbc.o:
-	$(CC) -o bin/AesCbc.o src/AesCbc.cpp $(CFLAGS)
+	$(CC) -o bin/AesCbc.o src/security/AesCbc.cpp $(CFLAGS)
 
 FileManager.o:
-	$(CC) -o bin/FileManager.o src/FileManager.cpp $(CFLAGS)
+	$(CC) -o bin/FileManager.o src/utility/FileManager.cpp $(CFLAGS)
 
 Sha512.o:
-	$(CC) -o bin/Sha512.o src/Sha512.cpp $(CFLAGS)
+	$(CC) -o bin/Sha512.o src/security/Sha512.cpp $(CFLAGS)
 
 Hmac.o:
-	$(CC) -o bin/Hmac.o src/Hmac.cpp $(CFLAGS)
+	$(CC) -o bin/Hmac.o src/security/Hmac.cpp $(CFLAGS)
 
 DigitalSignature.o:
-	$(CC) -o bin/DigitalSignature.o src/DigitalSignature.cpp $(CFLAGS)
+	$(CC) -o bin/DigitalSignature.o src/security/DigitalSignature.cpp $(CFLAGS)
 
 CertificateStore.o:
-	$(CC) -o bin/CertificateStore.o src/CertificateStore.cpp $(CFLAGS)
+	$(CC) -o bin/CertificateStore.o src/security/CertificateStore.cpp $(CFLAGS)
 
 DiffieHellman.o:
-	$(CC) -o bin/DiffieHellman.o src/DiffieHellman.cpp $(CFLAGS)
+	$(CC) -o bin/DiffieHellman.o src/security/DiffieHellman.cpp $(CFLAGS)
 
 clean:
 	rm bin/*

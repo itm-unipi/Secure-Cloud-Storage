@@ -2,8 +2,8 @@
 #include <cstring>
 #include <openssl/evp.h>
 
-#include "../src/DiffieHellman.h"
-#include "../src/Sha512.h"
+#include "../src/security/DiffieHellman.h"
+#include "../src/security/Sha512.h"
 
 using namespace std;
 
