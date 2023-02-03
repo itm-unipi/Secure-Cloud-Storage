@@ -1,4 +1,4 @@
 # To Do List
 
-* Classe per i socket + Esempio di struttura del messaggio + Metodo di serializzazione/deserializzazione
+* Nella serializzazione dei pacchetti decidere se creare un buffer di unsigned char o di uint8_t
 * Protocollo di login

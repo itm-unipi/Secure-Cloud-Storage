@@ -2,19 +2,88 @@
 #include <cstring>
 #include <chrono>
 #include <thread>
+#include <arpa/inet.h>
 
 #include "../src/utility/ListeningSocket.h"
 
 #define MSG "test\0"
 #define MSG_SIZE 5
 
-using namespace std;    
+using namespace std;
+
+// ------------ PACKET EXAMPLE ------------
+
+struct Packet {
+    uint8_t iv[16];
+    uint8_t type;
+    uint32_t counter;
+    char filename[30];
+    char new_filename[30];
+    uint8_t hmac[32];
+
+    unsigned char* serialize() const {
+        
+        unsigned char* buffer = new unsigned char[sizeof(Packet)];
+
+        size_t position = 0;
+        memcpy(buffer, iv, 16 * sizeof(uint8_t));
+        position += 16 * sizeof(uint8_t);
+        memcpy(buffer + position, &type, sizeof(uint8_t));
+        position += sizeof(uint8_t);
+        uint32_t portable_counter = htonl(counter);
+        memcpy(buffer + position, &portable_counter, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+        memcpy(buffer + position, filename, 30 * sizeof(char));
+        position += 30 * sizeof(char);
+        memcpy(buffer + position, new_filename, 30 * sizeof(char));
+        position += 30 * sizeof(char);
+        memcpy(buffer + position, hmac, 32 * sizeof(uint8_t));
+        
+        return buffer;
+    }
+
+    static Packet deserialize(unsigned char* buffer) {
+        
+        Packet packet;
+        
+        size_t position = 0;
+        memcpy(packet.iv, buffer, 16 * sizeof(uint8_t));
+        position += 16 * sizeof(uint8_t);
+        memcpy(&packet.type, buffer + position, sizeof(uint8_t));
+        position += sizeof(uint8_t);
+        uint32_t portable_counter;
+        memcpy(&portable_counter, buffer + position, sizeof(uint32_t));
+        packet.counter = ntohl(portable_counter);
+        position += sizeof(uint32_t);
+        memcpy(packet.filename, buffer + position, 30 * sizeof(char));
+        position += 30 * sizeof(char);
+        memcpy(packet.new_filename, buffer + position, 30 * sizeof(char));
+        position += 30 * sizeof(char);
+        memcpy(packet.hmac, buffer + position, 32 * sizeof(uint8_t));
+
+        return packet;
+    }
+
+    void print() const {
+
+        cout << "\nPACKET:" << endl;
+        cout << "IV: " << iv << endl;
+        cout << "TYPE: " << (int)type << endl;
+        cout << "COUNTER: " << counter << endl;
+        cout << "FILENAME: " << filename << endl;
+        cout << "NEW FILENAME: " << new_filename << endl;
+        cout << "HMAC: " << hmac << endl;
+    }
+};
+
+// ----------------------------------------
 
 void server() {
 
-    ListeningSocket listening_socket("localhost", 5000, 10);
+    ListeningSocket listening_socket("localhost", 7000, 10);
     CommunicationSocket* communication_socket = listening_socket.accept();
 
+    // invio ripetuto del messaggio
     for (int i = 0; i < 3; ++i) {
         unsigned char msg[MSG_SIZE];
         int msg_size = MSG_SIZE;
@@ -26,19 +95,45 @@ void server() {
             cout << "STRINGA UGUALE" << endl;
     }
 
+    // creazione parametri da mettere nel pacchetto
+    unsigned char* iv = (unsigned char*)"012345678912345";
+    uint8_t type = 2;
+    uint32_t counter = 100000;
+    string filename = "a.txt";
+    string new_filename = "b.txt";
+    unsigned char* hmac = (unsigned char*)"0123456789123456012345678912345";
+
+    // creazione della struct del pacchetto
+    Packet packet;
+    memcpy(packet.iv, iv, 16);
+    packet.type = type;
+    packet.counter = counter;
+    strcpy(packet.filename, filename.c_str());
+    strcpy(packet.new_filename, new_filename.c_str());
+    memcpy(packet.hmac, hmac, 32);
+
+    unsigned char* serialized_packet = packet.serialize();
+    communication_socket->send(serialized_packet, sizeof(Packet));
+
+    delete[] serialized_packet; 
     delete communication_socket;
 }
 
 void client() {
 
     this_thread::sleep_for(chrono::seconds(2));
-    CommunicationSocket communication_socket("localhost", 5000);
+    CommunicationSocket communication_socket("localhost", 7000);
 
     unsigned char* msg = (unsigned char*)MSG;
     int msg_size = MSG_SIZE;
 
     for (int i = 0; i < 3; ++i)
         communication_socket.send(msg, msg_size);
+
+    unsigned char serialized_packet[sizeof(Packet)];
+    communication_socket.receive(serialized_packet, sizeof(Packet));
+    Packet packet = Packet::deserialize(serialized_packet);
+    packet.print();
 }
 
 int main() {
