@@ -2,7 +2,9 @@ CC = g++
 LFLAGS = -Wall -pthread -lssl -lcrypto -std=c++17 -Wno-unknown-pragmas -Wno-deprecated-declarations
 CFLAGS = -Wall -c -Wno-unknown-pragmas -Wno-deprecated-declarations
 
-all: aesCbcTest fileManagerTest sha512test hmacTest signatureTest certificateTest diffieHellmanTest
+all: 
+
+test: aesCbcTest fileManagerTest sha512test hmacTest signatureTest certificateTest diffieHellmanTest socketTest
 
 aesCbcTest: AesCbc.o
 	$(CC) -o bin/aesCbcTest bin/AesCbc.o test/AesCbcTest.cpp $(LFLAGS)
@@ -25,6 +27,9 @@ certificateTest: CertificateStore.o
 diffieHellmanTest: DiffieHellman.o Sha512.o
 	$(CC) -o bin/diffieHellmanTest bin/DiffieHellman.o bin/Sha512.o test/DiffieHellmanTest.cpp $(LFLAGS)
 
+socketTest: Socket.o
+	$(CC) -o bin/socketTest bin/ListeningSocket.o bin/CommunicationSocket.o test/SocketTest.cpp $(LFLAGS)
+
 AesCbc.o:
 	$(CC) -o bin/AesCbc.o src/security/AesCbc.cpp $(CFLAGS)
 
@@ -45,6 +50,10 @@ CertificateStore.o:
 
 DiffieHellman.o:
 	$(CC) -o bin/DiffieHellman.o src/security/DiffieHellman.cpp $(CFLAGS)
+
+Socket.o:
+	$(CC) -o bin/ListeningSocket.o src/utility/ListeningSocket.cpp $(CFLAGS)
+	$(CC) -o bin/CommunicationSocket.o src/utility/CommunicationSocket.cpp $(CFLAGS)
 
 clean:
 	rm bin/*
