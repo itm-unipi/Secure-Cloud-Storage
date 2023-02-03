@@ -22,6 +22,9 @@ signatureTest: DigitalSignature.o
 certificateTest: CertificateStore.o
 	$(CC) -o bin/certificateTest bin/CertificateStore.o test/CertificateStoreTest.cpp $(LFLAGS)
 
+diffieHellmanTest: DiffieHellman.o Sha512.o
+	$(CC) -o bin/diffieHellmanTest bin/DiffieHellman.o bin/Sha512.o test/DiffieHellmanTest.cpp $(LFLAGS)
+
 AesCbc.o:
 	$(CC) -o bin/AesCbc.o src/AesCbc.cpp $(CFLAGS)
 
@@ -39,6 +42,9 @@ DigitalSignature.o:
 
 CertificateStore.o:
 	$(CC) -o bin/CertificateStore.o src/CertificateStore.cpp $(CFLAGS)
+
+DiffieHellman.o:
+	$(CC) -o bin/DiffieHellman.o src/DiffieHellman.cpp $(CFLAGS)
 
 clean:
 	rm bin/*
