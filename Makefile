@@ -2,7 +2,13 @@ CC = g++
 LFLAGS = -Wall -pthread -lssl -lcrypto -std=c++17 -Wno-unknown-pragmas -Wno-deprecated-declarations
 CFLAGS = -Wall -c -Wno-unknown-pragmas -Wno-deprecated-declarations
 
-all: 
+all: server client
+
+server: Server.o
+	$(CC) -DSERVER_APPLICATION -o bin/server bin/Server.o src/Main.cpp $(LFLAGS)
+
+client: Client.o
+	$(CC) -DCLIENT_APPLICATION -o bin/client bin/Client.o src/Main.cpp $(LFLAGS)
 
 test: aesCbcTest fileManagerTest sha512test hmacTest signatureTest certificateTest diffieHellmanTest socketTest
 
@@ -29,6 +35,15 @@ diffieHellmanTest: DiffieHellman.o Sha512.o
 
 socketTest: Socket.o
 	$(CC) -o bin/socketTest bin/ListeningSocket.o bin/CommunicationSocket.o test/SocketTest.cpp $(LFLAGS)
+
+encryptPrivateKey:
+	$(CC) -o bin/encryptPrivateKey test/EncryptPrivateKey.cpp $(LFLAGS)
+
+Server.o:
+	$(CC) -o bin/Server.o src/server/Server.cpp $(CFLAGS)
+
+Client.o:
+	$(CC) -o bin/Client.o src/client/Client.cpp $(CFLAGS)
 
 AesCbc.o:
 	$(CC) -o bin/AesCbc.o src/security/AesCbc.cpp $(CFLAGS)
