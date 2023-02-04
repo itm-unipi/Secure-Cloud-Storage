@@ -35,7 +35,7 @@ CommunicationSocket::~CommunicationSocket() {
     close(m_communication_socket);
 }
 
-int CommunicationSocket::send(unsigned char* input_buffer, int input_buffer_size) {
+int CommunicationSocket::send(uint8_t* input_buffer, int input_buffer_size) {
 
     int ret = ::send(m_communication_socket, input_buffer, input_buffer_size, 0);
     if (ret == -1) {
@@ -46,7 +46,7 @@ int CommunicationSocket::send(unsigned char* input_buffer, int input_buffer_size
     return 0;
 }
 
-int CommunicationSocket::receive(unsigned char* output_buffer, int output_buffer_size) {
+int CommunicationSocket::receive(uint8_t* output_buffer, int output_buffer_size) {
 
     int ret = recv(m_communication_socket, (void*)output_buffer, output_buffer_size, MSG_WAITALL);
     if (ret == -1) {
