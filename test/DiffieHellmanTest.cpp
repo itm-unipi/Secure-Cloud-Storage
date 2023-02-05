@@ -25,6 +25,7 @@ int main() {
 
     cout << "\nSHARED SECRET 1:" << endl;
     BIO_dump_fp(stdout, (const char *)shared_secret_1, shared_secret_size_1);
+    cout << "\nSHARED SECRET size:" << shared_secret_size_1 << endl;
     cout << "\nSHARED SECRET 2:" << endl;
     BIO_dump_fp(stdout, (const char *)shared_secret_2, shared_secret_size_2);
 
@@ -46,15 +47,31 @@ int main() {
     cout << "\nHMAC KEY:" << endl;
     BIO_dump_fp(stdout, (const char *)hmac_key, key_size);
 
+    // --------------------- TEST SERIALIZATION ----------------------
+
+    uint8_t* serialized_ek = nullptr;
+    int serialized_ek_size;
+    DiffieHellman::serializeKey(ephemeral_key_1, serialized_ek, serialized_ek_size);
+    EVP_PKEY* deserialized_ek = DiffieHellman::deserializeKey(serialized_ek, serialized_ek_size);
+
+    int result = EVP_PKEY_cmp(ephemeral_key_1, deserialized_ek);
+    if (result == 1) {
+        std::cout << "Le chiavi sono uguali" << std::endl;
+    } else {
+        std::cout << "Le chiavi sono diverse" << std::endl;
+    }
+
     // ---------------------------------------------------------------
 
     EVP_PKEY_free(ephemeral_key_1);
     EVP_PKEY_free(ephemeral_key_2);
+    EVP_PKEY_free(deserialized_ek);
     delete[] shared_secret_1;
     delete[] shared_secret_2;
     delete[] digest;
     delete[] session_key;
     delete[] hmac_key;
+    delete[] serialized_ek;
 
     return 0;
 }

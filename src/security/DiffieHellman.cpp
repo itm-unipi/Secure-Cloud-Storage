@@ -132,3 +132,53 @@ int DiffieHellman::generateSharedSecret(EVP_PKEY* ephemeral_key_1, EVP_PKEY* eph
     EVP_PKEY_CTX_free(derive_ctx);
     return 0;
 }
+
+int DiffieHellman::serializeKey(EVP_PKEY* key, uint8_t*& serialized_key, int& serialized_key_size) {
+
+    BIO *bio = BIO_new(BIO_s_mem());
+    if (!bio) {
+        cerr << "[-] (DiffieHellman) Failed to create BIO" << endl;
+        BIO_free(bio);
+        return -1;
+    }
+
+    if (!PEM_write_bio_PUBKEY(bio, key)) {
+        cerr << "[-] (DiffieHellman) Failed to write key in the BIO" << endl;
+        BIO_free(bio);
+        return -1;
+    }
+
+    serialized_key_size = BIO_pending(bio);
+    serialized_key = new unsigned char[serialized_key_size];
+
+    int read = BIO_read(bio, serialized_key, serialized_key_size);
+    if (read != serialized_key_size) {
+        cerr << "[-] (DiffieHellman) Failed to write the serialized key in the buffer" << endl;
+        BIO_free(bio);
+        delete[] serialized_key;
+        return -1;
+    }
+
+    BIO_free(bio);
+    return 0;
+}
+
+EVP_PKEY* DiffieHellman::deserializeKey(uint8_t* serialized_key, int serialized_key_size) {
+
+    BIO *bio = BIO_new_mem_buf(serialized_key, serialized_key_size);
+    if (!bio) {
+        cerr << "[-] (DiffieHellman) Failed to create the BIO" << endl;
+        return nullptr;
+    }
+
+    EVP_PKEY* deserialized_key = nullptr;
+    deserialized_key = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+    if (!deserialized_key) {        
+        cerr << "[-] (DiffieHellman) Failed to read the deserialized key" << endl;
+        BIO_free(bio);
+        return nullptr;
+    }
+
+    BIO_free(bio);
+    return deserialized_key;
+}
