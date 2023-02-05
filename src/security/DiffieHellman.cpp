@@ -149,7 +149,7 @@ int DiffieHellman::serializeKey(EVP_PKEY* key, uint8_t*& serialized_key, int& se
     }
 
     serialized_key_size = BIO_pending(bio);
-    serialized_key = new unsigned char[serialized_key_size];
+    serialized_key = new uint8_t[serialized_key_size];
 
     int read = BIO_read(bio, serialized_key, serialized_key_size);
     if (read != serialized_key_size) {
