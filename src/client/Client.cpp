@@ -3,6 +3,8 @@
 #include <openssl/pem.h>
 
 #include "Client.h"
+#include "../packet/Login.h"
+#include "../security/DiffieHellman.h"
 
 using namespace std;
 
@@ -15,6 +17,46 @@ Client::~Client() {
 }
 
 int Client::login() {
+
+    // generate the ephemeral key (that contains private and public keys)
+    DiffieHellman dh;
+    EVP_PKEY* ephemeral_key = dh.generateEphemeralKey();
+
+    // serialize ephemeral key
+    uint8_t* serialized_ephemeral_key = nullptr;
+    int serialized_ephemeral_key_size;
+    int res = DiffieHellman::serializeKey(ephemeral_key, serialized_ephemeral_key, serialized_ephemeral_key_size);
+    if (!res) {
+        // TODO: errore + delete
+    }
+
+    // 1.) send ephemeral key and username
+    LoginM1 m1(serialized_ephemeral_key, m_username);
+    uint8_t* serialized_packet = m1.serialize();
+    res = m_socket->send(serialized_packet, LoginM1::getSize());
+    delete[] serialized_packet;
+    if (!res) {
+        // TODO: errore + delete
+    }
+
+    // 2.) receive the result of existence of the user
+    serialized_packet = new uint8_t[LoginM2::getSize()];
+    res = m_socket->receive(serialized_packet, LoginM2::getSize());
+    if (!res) {
+        // TODO: errore + delete
+    }
+
+    // check if the server found the username
+    uint8_t result_check = LoginM2::deserialize(serialized_packet).result;
+    delete[] serialized_packet;
+    if (!result_check) {
+        // TODO: errore + delete
+        cerr << "User not exists" << endl;
+        return -1;
+    }
+
+    cout << "User exists" << endl;
+
     return 0;
 }
 
@@ -54,6 +96,14 @@ int Client::run() {
     // encrypt and save the long term private key
     m_long_term_key = PEM_read_bio_PrivateKey(bio, 0, 0, (void *)password.c_str());
     BIO_free(bio);
+
+    // connect to the server
+    try {
+        m_socket = new CommunicationSocket(SERVER_IP, SERVER_PORT);
+    } catch (const std::exception& e) {
+        std::cerr << "[-] (Client) Exeption: " << e.what() << std::endl;
+        return -3;
+    }
 
     // ----------------------------------------------
 

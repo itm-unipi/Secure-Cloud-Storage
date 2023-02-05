@@ -4,11 +4,11 @@ CFLAGS = -Wall -c -Wno-unknown-pragmas -Wno-deprecated-declarations
 
 all: server client
 
-server: Server.o
-	$(CC) -DSERVER_APPLICATION -o bin/server bin/Server.o src/Main.cpp $(LFLAGS)
+server: Server.o Socket.o DiffieHellman.o Sha512.o
+	$(CC) -DSERVER_APPLICATION -o bin/server bin/Server.o bin/Worker.o bin/ListeningSocket.o bin/CommunicationSocket.o bin/DiffieHellman.o bin/Sha512.o src/Main.cpp $(LFLAGS)
 
-client: Client.o
-	$(CC) -DCLIENT_APPLICATION -o bin/client bin/Client.o src/Main.cpp $(LFLAGS)
+client: Client.o Socket.o DiffieHellman.o
+	$(CC) -DCLIENT_APPLICATION -o bin/client bin/Client.o bin/CommunicationSocket.o bin/DiffieHellman.o src/Main.cpp $(LFLAGS)
 
 test: aesCbcTest fileManagerTest sha512test hmacTest signatureTest certificateTest diffieHellmanTest socketTest
 
@@ -39,8 +39,12 @@ socketTest: Socket.o
 encryptPrivateKey:
 	$(CC) -o bin/encryptPrivateKey test/EncryptPrivateKey.cpp $(LFLAGS)
 
+extractPublicKey: CertificateStore.o
+	$(CC) -o bin/extractPublicKey bin/CertificateStore.o test/ExtractPublicKey.cpp $(LFLAGS)
+
 Server.o:
 	$(CC) -o bin/Server.o src/server/Server.cpp $(CFLAGS)
+	$(CC) -o bin/Worker.o src/server/Worker.cpp $(CFLAGS)
 
 Client.o:
 	$(CC) -o bin/Client.o src/client/Client.cpp $(CFLAGS)

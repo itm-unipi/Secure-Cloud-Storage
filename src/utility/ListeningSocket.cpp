@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstring>
+#include <exception>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -23,14 +24,14 @@ ListeningSocket::ListeningSocket(string server_ip, int server_port, int max_queu
     int ret = bind(m_listening_socket, (struct sockaddr*)&server_address, sizeof(server_address));
     if (ret == -1) {
         cerr << "[-] (ListeningSocket) Failed to bind socket" << endl;
-        return;
+        throw ("Failed to bind socket");
     }
 
     // open the socket
     ret = listen(m_listening_socket, max_queue);
     if (ret == -1) {
         cerr << "[-] (ListeningSocket) Failed to open socket" << endl;
-        return;
+        throw ("Failed to open socket");
     }
 }
 

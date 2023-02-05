@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstring>
+#include <exception>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -23,7 +24,7 @@ CommunicationSocket::CommunicationSocket(string server_ip, int server_port) {
     int ret = connect(m_communication_socket, (struct sockaddr*)&server_address, sizeof(server_address));
     if (ret == -1) {
         cerr << "[-] (CommunicationSocket) Failed to connect to server" << endl;
-        return;
+        throw ("Failed to connect to server");
     }
 }
 

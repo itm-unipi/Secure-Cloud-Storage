@@ -11,7 +11,7 @@ int main() {
 
 #ifdef SERVER_APPLICATION
     
-
+    Server().run();
 
 #elif CLIENT_APPLICATION
 
