@@ -104,9 +104,9 @@ EVP_PKEY* DiffieHellman::generateEphemeralKey() {
     return ephemeral_key;
 }
 
-int DiffieHellman::generateSharedSecret(EVP_PKEY* ephemeral_key_1, EVP_PKEY* ephemeral_key_2, unsigned char*& shared_secret, size_t& shared_secret_size) {
+int DiffieHellman::generateSharedSecret(EVP_PKEY* private_key, EVP_PKEY* peer_ephemeral_key, unsigned char*& shared_secret, size_t& shared_secret_size) {
 
-    EVP_PKEY_CTX* derive_ctx = EVP_PKEY_CTX_new(ephemeral_key_1, NULL);
+    EVP_PKEY_CTX* derive_ctx = EVP_PKEY_CTX_new(private_key, NULL);
     if (!derive_ctx) {
         cerr << "[-] (DiffieHellman) Failed to create derive context" << endl;
         return -1;
@@ -117,8 +117,8 @@ int DiffieHellman::generateSharedSecret(EVP_PKEY* ephemeral_key_1, EVP_PKEY* eph
         return -1;
     }
 
-    if (EVP_PKEY_derive_set_peer(derive_ctx, ephemeral_key_2) <= 0) {
-        cerr << "[-] (DiffieHellman) Failed to set ephemeral keys in the context" << endl;
+    if (EVP_PKEY_derive_set_peer(derive_ctx, peer_ephemeral_key) <= 0) {
+        cerr << "[-] (DiffieHellman) Failed to set peer ephemeral keys in the context" << endl;
         return -1;
     }
 
