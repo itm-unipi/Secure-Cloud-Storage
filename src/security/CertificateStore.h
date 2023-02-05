@@ -18,8 +18,12 @@ public:
     CertificateStore(const CertificateStore&) = delete;
     ~CertificateStore();
 
-    bool verify(string certificate_filename);
-    EVP_PKEY* getPublicKey(string certificate_filename);
+    X509* load(string certificate_filename);
+    bool verify(X509* certificate);
+    EVP_PKEY* getPublicKey(X509* certificate);
+
+    static int serializeCertificate(X509* certificate, uint8_t*& serialized_certificate, int& serialized_certificate_size);
+    static X509* deserializeCertificate(uint8_t* serialized_certificate, int serialized_certificate_size);
 
     // -------------- Singleton management --------------
 

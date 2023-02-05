@@ -84,47 +84,7 @@ CertificateStore::~CertificateStore() {
     X509_STORE_free(m_store);
 }
 
-bool CertificateStore::verify(string certificate_filename) {
-
-    FILE* certificate_file = fopen(certificate_filename.c_str(), "r");
-    if (!certificate_file) { 
-        cerr << "[-] Failed to open certificate" << endl; 
-        return false; 
-    }
-
-    X509* certificate = PEM_read_X509(certificate_file, NULL, NULL, NULL);
-    fclose(certificate_file);
-    if (!certificate) { 
-        cerr << "[-] Failed read certificate" << endl; 
-        return false;
-    }
-    
-    X509_STORE_CTX* certificate_verify_ctx = X509_STORE_CTX_new();
-    if (!certificate_verify_ctx) { 
-        cerr << "[-] Failed to create the verification context" << endl;
-        X509_free(certificate); 
-        return false;
-    }
-
-    int ret = X509_STORE_CTX_init(certificate_verify_ctx, m_store, certificate, NULL);
-    if (ret != 1) { 
-        cerr << "[-] Failed to initialize the verification context" << endl; 
-        X509_free(certificate);
-        return false;
-    }
-
-    ret = X509_verify_cert(certificate_verify_ctx);
-    X509_free(certificate);
-    if (ret != 1) { 
-        cerr << "[-] Certificate validation failed" << endl; 
-        return false;
-    }
-
-    X509_STORE_CTX_free(certificate_verify_ctx);
-    return true;
-}
-
-EVP_PKEY* CertificateStore::getPublicKey(string certificate_filename) {
+X509* CertificateStore::load(string certificate_filename) {
 
     FILE* certificate_file = fopen(certificate_filename.c_str(), "r");
     if (!certificate_file) { 
@@ -139,8 +99,87 @@ EVP_PKEY* CertificateStore::getPublicKey(string certificate_filename) {
         return nullptr;
     }
 
+    return certificate;
+}
+
+bool CertificateStore::verify(X509* certificate) {
+ 
+    X509_STORE_CTX* certificate_verify_ctx = X509_STORE_CTX_new();
+    if (!certificate_verify_ctx) { 
+        cerr << "[-] Failed to create the verification context" << endl;
+        return false;
+    }
+
+    int ret = X509_STORE_CTX_init(certificate_verify_ctx, m_store, certificate, NULL);
+    if (ret != 1) { 
+        cerr << "[-] Failed to initialize the verification context" << endl; 
+        return false;
+    }
+
+    ret = X509_verify_cert(certificate_verify_ctx);
+    if (ret != 1) { 
+        cerr << "[-] Certificate validation failed" << endl; 
+        return false;
+    }
+
+    X509_STORE_CTX_free(certificate_verify_ctx);
+    return true;
+}
+
+EVP_PKEY* CertificateStore::getPublicKey(X509* certificate) {
+
     EVP_PKEY* public_key = X509_get_pubkey(certificate);
     X509_free(certificate);
-
+    cout << "[test] " << public_key << endl;
     return public_key;
+}
+
+int CertificateStore::serializeCertificate(X509* certificate, uint8_t*& serialized_certificate, int& serialized_certificate_size) {
+
+    BIO* bio = BIO_new(BIO_s_mem());
+    if (!bio) {
+        cerr << "[-] Failed to create BIO" << endl; 
+        return -1;
+    }
+
+    int result = PEM_write_bio_X509(bio, certificate);
+    if (!result) {
+        cerr << "[-] Failed to write the certificate in the BIO" << endl; 
+        BIO_free(bio);
+        return -1;
+    }
+
+    serialized_certificate_size = BIO_pending(bio);
+    serialized_certificate = new uint8_t[serialized_certificate_size];
+
+    result = BIO_read(bio, serialized_certificate, serialized_certificate_size);
+    if (result != serialized_certificate_size) {
+        cerr << "[-] Failed to read the serialized certificate" << endl;
+        BIO_free(bio);
+        delete[] serialized_certificate;
+        return -1;
+    }
+
+    BIO_free(bio);
+    return 0;
+}
+
+X509* CertificateStore::deserializeCertificate(uint8_t* serialized_certificate, int serialized_certificate_size) {
+
+    BIO* bio = BIO_new_mem_buf(serialized_certificate, serialized_certificate_size);
+    if (!bio) {
+        cerr << "[-] Failed to create BIO" << endl;
+        return nullptr;
+    }
+
+    X509* deserialized_certificate = nullptr;
+    deserialized_certificate = PEM_read_bio_X509(bio, NULL, NULL, NULL);
+    if (!deserialized_certificate) {
+        cerr << "[-] Failed to deserialize certificate" << endl;
+        BIO_free(bio);
+        return nullptr;
+    }
+
+    BIO_free(bio);
+    return deserialized_certificate;
 }
