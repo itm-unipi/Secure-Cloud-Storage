@@ -5,6 +5,9 @@
 #include "Client.h"
 #include "../packet/Login.h"
 #include "../security/DiffieHellman.h"
+#include "../security/Sha512.h"
+#include "../security/DigitalSignature.h"
+#include "../security/AesCbc.h"
 
 using namespace std;
 
@@ -56,6 +59,49 @@ int Client::login() {
     }
 
     cout << "User exists" << endl;
+
+    // 3.) receive the M3 packet
+    serialized_packet = new uint8_t[LoginM3::getSize()];
+    res = m_socket->receive(serialized_packet, LoginM3::getSize());
+    if (!res) {
+        // TODO: errore + delete
+    }
+
+    // deserialize the M3 packet
+    LoginM3 m3 = LoginM3::deserialize(serialized_packet);
+
+    // retrieve the peer ephemeral key from the M3 packet
+    EVP_PKEY* peer_ephemeral_key = DiffieHellman::deserializeKey(m3.ephemeral_key, m3.ephemeral_key_size);
+
+    // generate the shared secret
+    uint8_t* shared_secret = nullptr;
+    size_t shared_secret_size;    
+    res = dh.generateSharedSecret(ephemeral_key, peer_ephemeral_key, shared_secret, shared_secret_size);
+    if (res) {
+        // TODO: errore + delete
+    }
+    
+    // generate the session key and hmac key
+    unsigned char* keys;
+    unsigned int keys_size;
+    Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
+    memcpy(m_session_key, keys, 32 * sizeof(unsigned char));
+    memcpy(m_hmac_key, keys + (32 * sizeof(unsigned char)), 32 * sizeof(unsigned char));
+    
+    cout << "SHARED SECRET: ";
+    for (int i = 0; i < 256; ++i)
+        cout << shared_secret[i];
+    cout << endl;
+
+    cout << "SESSION KEY: ";
+    for (int i = 0; i < 32; ++i)
+        cout << m_session_key[i];
+    cout << endl;
+
+    cout << "HMAC KEY: ";
+    for (int i = 0; i < 32; ++i)
+        cout << m_hmac_key[i];
+    cout << endl;
 
     return 0;
 }

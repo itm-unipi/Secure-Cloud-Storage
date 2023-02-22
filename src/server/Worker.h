@@ -6,8 +6,8 @@
 class Worker {
 
     CommunicationSocket* m_socket;
-    unsigned char m_session_key[256];
-    unsigned char m_hmac_key[256];
+    unsigned char m_session_key[32];
+    unsigned char m_hmac_key[32];
 
     // protocols
     int loginRequest();

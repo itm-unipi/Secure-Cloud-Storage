@@ -14,8 +14,10 @@ using namespace std;
 class Client {
 
     string m_username;
-    EVP_PKEY* m_long_term_key;
     CommunicationSocket* m_socket;
+    EVP_PKEY* m_long_term_key;
+    unsigned char m_session_key[32];
+    unsigned char m_hmac_key[32];
 
     int login();
     int logout();

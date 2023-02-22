@@ -5,6 +5,8 @@
 #include "../packet/Login.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
+#include "../security/DigitalSignature.h"
+#include "../security/AesCbc.h"
 
 Worker::Worker(CommunicationSocket* socket) {
     m_socket = socket;
@@ -79,10 +81,68 @@ int Worker::loginRequest() {
     unsigned char* keys;
     unsigned int keys_size;
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
-    memcpy(m_session_key, keys, 16 * sizeof(unsigned char));
-    memcpy(m_hmac_key, keys + (16 * sizeof(unsigned char)), 16 * sizeof(unsigned char));
-    cout << "SESSION KEY: " << m_session_key << endl;
-    cout << "HMAC KEY: " << m_hmac_key << endl;
+    memcpy(m_session_key, keys, 32 * sizeof(unsigned char));
+    memcpy(m_hmac_key, keys + (32 * sizeof(unsigned char)), 32 * sizeof(unsigned char));
+
+    // load certificate from PEM
+    string certificate_filename = "resources/certificates/Server_certificate.pem";
+    CertificateStore* certificate_store = CertificateStore::getStore();
+    X509* certificate = certificate_store->load(certificate_filename);
+
+    // serialize certificate
+    uint8_t* serialized_certificate = nullptr;
+    int serialized_certificate_size = 0;
+    CertificateStore::serializeCertificate(certificate, serialized_certificate, serialized_certificate_size);
+    
+    // serialize ephemeral key
+    uint8_t* serialized_ephemeral_key = nullptr;
+    int serialized_ephemeral_key_size;
+    res = DiffieHellman::serializeKey(ephemeral_key, serialized_ephemeral_key, serialized_ephemeral_key_size);
+    if (!res) {
+        // TODO: errore + delete
+    }
+
+    // prepare <g^a,g^b>
+    uint8_t* ephemeral_keys_buffer = new uint8_t[m1.ephemeral_key_size + serialized_ephemeral_key_size];
+    memcpy(ephemeral_keys_buffer, m1.ephemeral_key, m1.ephemeral_key_size);
+    memcpy(ephemeral_keys_buffer + m1.ephemeral_key_size, serialized_ephemeral_key, serialized_ephemeral_key_size);
+
+    // calculate <g^a,g^b>_s
+    unsigned char* signature;
+    unsigned int signature_size;
+    DigitalSignature::generate(ephemeral_keys_buffer, m1.ephemeral_key_size + serialized_ephemeral_key_size, signature, signature_size, private_key);
+
+    // calculate {<g^a,g^b>_s}_Ksess
+    unsigned char* ciphertext = nullptr;
+    unsigned char* iv = nullptr;
+    int ciphertext_size = 0;
+    AesCbc* encryptor = new AesCbc(ENCRYPT, m_session_key);
+    encryptor->run(signature, signature_size, ciphertext, ciphertext_size, iv);
+    
+    // 3) prepare and send the M3 packet
+    LoginM3 m3(serialized_ephemeral_key, serialized_ephemeral_key_size, iv, ciphertext, serialized_certificate, serialized_certificate_size);
+    serialized_packet = m3.serialize();
+
+    res = m_socket->send(serialized_packet, LoginM3::getSize());
+    delete[] serialized_packet;
+    if (!res) {
+        // TODO: errore + delete
+    }
+
+    cout << "SHARED SECRET: ";
+    for (int i = 0; i < 256; ++i)
+        cout << shared_secret[i];
+    cout << endl;
+
+    cout << "SESSION KEY: ";
+    for (int i = 0; i < 32; ++i)
+        cout << m_session_key[i];
+    cout << endl;
+
+    cout << "HMAC KEY: ";
+    for (int i = 0; i < 32; ++i)
+        cout << m_hmac_key[i];
+    cout << endl;
 
     return 0;
 }

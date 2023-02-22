@@ -129,8 +129,7 @@ bool CertificateStore::verify(X509* certificate) {
 EVP_PKEY* CertificateStore::getPublicKey(X509* certificate) {
 
     EVP_PKEY* public_key = X509_get_pubkey(certificate);
-    X509_free(certificate);
-    cout << "[test] " << public_key << endl;
+    
     return public_key;
 }
 

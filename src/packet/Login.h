@@ -6,6 +6,9 @@
 #include <cstdint>
 #include <cstring>
 #include <arpa/inet.h>
+
+#include "../security/CertificateStore.h"
+
 using namespace std;
 
 // --------------------------------------- M1 ---------------------------------------
@@ -23,7 +26,7 @@ struct LoginM1 {
         memset(this->ephemeral_key, 0, sizeof(this->ephemeral_key));
         memcpy(this->ephemeral_key, ephemeral_key, ephemeral_key_size);
 
-        this->ephemeral_key_size = htonl((unsigned int)ephemeral_key_size);
+        this->ephemeral_key_size = (unsigned int)ephemeral_key_size;
 
         memset(this->username, 0, sizeof(this->username));
         strcpy(this->username, username.c_str());
@@ -37,7 +40,8 @@ struct LoginM1 {
         memcpy(buffer, ephemeral_key, 1024 * sizeof(uint8_t));
         position += 1024 * sizeof(uint8_t);
 
-        memcpy(buffer + position, &ephemeral_key_size, sizeof(uint32_t));
+        uint32_t ephemeral_key_size_hton = htonl(ephemeral_key_size);
+        memcpy(buffer + position, &ephemeral_key_size_hton, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
         memcpy(buffer + position, username, 30 * sizeof(char));
@@ -53,7 +57,9 @@ struct LoginM1 {
         memcpy(loginM1.ephemeral_key, buffer, 1024 * sizeof(uint8_t));
         position += 1024 * sizeof(uint8_t);
 
-        memcpy(&loginM1.ephemeral_key_size, buffer + position, sizeof(uint32_t));
+        uint32_t ephemeral_key_size_hton = 0;
+        memcpy(&ephemeral_key_size_hton, buffer + position, sizeof(uint32_t));
+        loginM1.ephemeral_key_size = ntohl(ephemeral_key_size_hton);
         position += sizeof(uint32_t);
 
         memcpy(loginM1.username, buffer + position, 30 * sizeof(char));
@@ -129,7 +135,116 @@ struct LoginM2 {
 
 // --------------------------------------- M3 ---------------------------------------
 
+struct LoginM3 {
 
+    uint8_t ephemeral_key[1024];
+    uint32_t ephemeral_key_size;
+    uint8_t iv[16];
+    uint8_t encrypted_signature[144];
+    uint8_t serialized_certificate[MAX_SERIALIZED_CERTIFICATE_SIZE];
+    uint32_t serialized_certificate_size;
+
+    LoginM3() {}
+
+    LoginM3(uint8_t* ephemeral_key, uint32_t ephemeral_key_size, uint8_t* iv, uint8_t* encrypted_signature, uint8_t* serialized_certificate, int serialized_certificate_size) {
+        
+        memset(this->ephemeral_key, 0, sizeof(this->ephemeral_key));
+        memcpy(this->ephemeral_key, ephemeral_key, ephemeral_key_size);
+
+        memcpy(this->iv, iv, 16 * sizeof(uint8_t));
+
+        this->ephemeral_key_size = (unsigned int)ephemeral_key_size;
+
+        memcpy(this->encrypted_signature, encrypted_signature, 144 * sizeof(uint8_t));
+
+        memcpy(this->serialized_certificate, serialized_certificate, serialized_certificate_size);
+        memset(this->serialized_certificate + serialized_certificate_size, 0, MAX_SERIALIZED_CERTIFICATE_SIZE - serialized_certificate_size);
+
+        this->serialized_certificate_size = (unsigned int)serialized_certificate_size;
+    }
+
+    uint8_t* serialize() const {
+
+        uint8_t* buffer = new uint8_t[LoginM3::getSize()];
+
+        size_t position = 0;
+        memcpy(buffer, ephemeral_key, 1024 * sizeof(uint8_t));
+        position += 1024 * sizeof(uint8_t);
+
+        uint32_t ephemeral_key_size_hton = htonl(ephemeral_key_size);
+        memcpy(buffer + position, &ephemeral_key_size_hton, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
+        memcpy(buffer + position, iv, 16 * sizeof(uint8_t));
+        position += 16 * sizeof(uint8_t);
+
+        memcpy(buffer + position, encrypted_signature, 144 * sizeof(uint8_t));
+        position += 144 * sizeof(uint8_t);
+
+        memcpy(buffer + position, serialized_certificate, MAX_SERIALIZED_CERTIFICATE_SIZE);
+        position += MAX_SERIALIZED_CERTIFICATE_SIZE;
+
+        uint32_t serialized_certificate_size_hton = htonl(serialized_certificate_size);
+        memcpy(buffer + position, &serialized_certificate_size_hton, sizeof(uint32_t));
+
+        return buffer;
+    }
+
+    static LoginM3 deserialize(uint8_t* buffer) {
+
+        LoginM3 loginM3;
+
+        size_t position = 0;
+        memcpy(loginM3.ephemeral_key, buffer, 1024 * sizeof(uint8_t));
+        position += 1024 * sizeof(uint8_t);
+
+        uint32_t ephemeral_key_size_hton = 0;
+        memcpy(&ephemeral_key_size_hton, buffer + position, sizeof(uint32_t));
+        loginM3.ephemeral_key_size = ntohl(ephemeral_key_size_hton);
+        position += sizeof(uint32_t);
+
+        memcpy(loginM3.iv, buffer + position, 16 * sizeof(uint8_t));
+        position += 16 * sizeof(uint8_t);
+
+        memcpy(loginM3.encrypted_signature, buffer + position, 144 * sizeof(uint8_t));
+        position += 144 * sizeof(uint8_t);
+
+        uint8_t serialized_certificate[MAX_SERIALIZED_CERTIFICATE_SIZE];
+        memcpy(serialized_certificate, buffer + position, MAX_SERIALIZED_CERTIFICATE_SIZE);
+        position += MAX_SERIALIZED_CERTIFICATE_SIZE;
+
+        uint32_t serialized_certificate_size_hton = 0;
+        memcpy(&serialized_certificate_size_hton, buffer + position, sizeof(uint32_t));
+        loginM3.serialized_certificate_size = ntohl(serialized_certificate_size_hton);
+
+        return loginM3;
+    }
+
+    static int getSize() {
+
+        int size = 0;
+
+        size += 1024 * sizeof(uint8_t);
+        size += sizeof(uint32_t);
+        size += 16 * sizeof(uint8_t);
+        size += 144 * sizeof(uint8_t);
+        size += MAX_SERIALIZED_CERTIFICATE_SIZE * sizeof(uint8_t);
+        size += sizeof(uint32_t);
+
+        return size;
+    }
+
+    void print() const {
+
+        cout << "---------- LOGIN M3 ----------" << endl;
+        cout << "EPHEMERAL KEY:\n" << (char*)ephemeral_key << endl;
+        cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
+        cout << "ENCRYPTED SIGNATURE:\n" << (char*)encrypted_signature << endl;
+        cout << "SERIALIZED CERTIFICATE:\n" << (char*)serialized_certificate << endl;
+        cout << "SERIALIZED CERTIFICATE SIZE: " << serialized_certificate_size << endl;
+        cout << "------------------------------" << endl;
+    }
+};
 
 // --------------------------------------- M4 ---------------------------------------
 

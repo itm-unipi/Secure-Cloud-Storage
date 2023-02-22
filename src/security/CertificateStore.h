@@ -3,6 +3,7 @@
 
 #define CA_CERTIFICATE_FILENAME "resources/certificates/CA_certificate.pem"
 #define CRL_FILENAME "resources/certificates/CA_crl.pem"
+#define MAX_SERIALIZED_CERTIFICATE_SIZE 1500
 
 #include <string>
 #include <openssl/x509_vfy.h>

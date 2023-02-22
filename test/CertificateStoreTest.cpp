@@ -12,7 +12,7 @@ int main() {
     FILE* private_key_file;
 
     // load private key from PEM file
-    private_key_file = fopen("resources/private_keys/server_key.pem", "rb");
+    private_key_file = fopen("resources/private_keys/Matteo_key.pem", "rb");
     private_key = PEM_read_PrivateKey(private_key_file, NULL, NULL, NULL);
     fclose(private_key_file); 
     cout << "CHIAVE PRIVATA: " << private_key << endl;   
@@ -35,7 +35,7 @@ int main() {
     // load public key from certificate
     EVP_PKEY* public_key = certificate_store->getPublicKey(certificate);
     cout << "\nCHIAVE PUBBLICA: " << endl;
-    // BIO_dump_fp(stdout, (const char*)public_key, 256);
+    BIO_dump_fp(stdout, (const char*)public_key, 256);
 
     /*/ ------------------ Prova della Firma ------------------
     
@@ -56,9 +56,16 @@ int main() {
         cerr << "Firma invalida" << endl;
     
     // ------------------------------------------------------- */
+
+    // test serialize
+    uint8_t* serialized_certificate = nullptr;
+    int serialized_certificate_size = 0;
+    CertificateStore::serializeCertificate(certificate, serialized_certificate, serialized_certificate_size);
+    cout << "Serialized certificate size: " << serialized_certificate_size << endl;
     
     EVP_PKEY_free(public_key);
     EVP_PKEY_free(private_key);
+    X509_free(certificate);
     CertificateStore::deleteStore();
 
     return 0;
