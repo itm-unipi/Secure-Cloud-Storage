@@ -2,16 +2,32 @@
 using namespace std;
 
 #ifdef SERVER_APPLICATION
-    #include "server/Server.h"
+
+#include <csignal>
+#include "server/Server.h"
+
+void signalHandler(int signum) {
+    
+    cout << "[+] (signalHandler) Server closed" << endl;
+    Server::closeInstance();
+    exit(signum);
+}
+
 #elif CLIENT_APPLICATION
-    #include "client/Client.h"
+
+#include "client/Client.h"
+
 #endif
 
 int main() {
 
 #ifdef SERVER_APPLICATION
+
+    // register the signal handler for SIGINT
+    signal(SIGINT, signalHandler);
     
-    Server().run();
+    Server::getInstace()->run();
+    Server::closeInstance();
 
 #elif CLIENT_APPLICATION
 

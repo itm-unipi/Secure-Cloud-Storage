@@ -31,7 +31,7 @@ int Client::login() {
     }
 
     // 1.) send ephemeral key and username
-    LoginM1 m1(serialized_ephemeral_key, m_username);
+    LoginM1 m1(serialized_ephemeral_key, serialized_ephemeral_key_size, m_username);
     uint8_t* serialized_packet = m1.serialize();
     res = m_socket->send(serialized_packet, LoginM1::getSize());
     delete[] serialized_packet;

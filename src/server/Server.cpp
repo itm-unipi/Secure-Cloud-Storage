@@ -5,6 +5,9 @@
 
 using namespace std;
 
+// initialization of Singleton field
+Server* Server::m_instance = nullptr;
+
 Server::Server() {
 
     try {

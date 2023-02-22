@@ -58,14 +58,14 @@ int Worker::loginRequest() {
     if (!private_key) {
         // TODO: errore + delete
     }
-    BIO_free(bp);
+    BIO_free(bp); 
 
     // generate the ephemeral_key (that contains private and public keys)
     DiffieHellman dh;
     EVP_PKEY* ephemeral_key = dh.generateEphemeralKey();
 
     // retrieve the peer ephemeral key from the M1 packet
-    EVP_PKEY* peer_ephemeral_key = DiffieHellman::deserializeKey(m1.ephemeral_key, 256);
+    EVP_PKEY* peer_ephemeral_key = DiffieHellman::deserializeKey(m1.ephemeral_key, m1.ephemeral_key_size);
 
     // generate the shared secret
     uint8_t* shared_secret = nullptr;
@@ -74,13 +74,13 @@ int Worker::loginRequest() {
     if (res) {
         // TODO: errore + delete
     }
-
+    
     // generate the session key and hmac key
     unsigned char* keys;
     unsigned int keys_size;
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
-    memcpy(m_session_key, keys, 256 * sizeof(unsigned char));
-    memcpy(m_hmac_key, keys + (256 * sizeof(unsigned char)), 256 * sizeof(unsigned char));
+    memcpy(m_session_key, keys, 16 * sizeof(unsigned char));
+    memcpy(m_hmac_key, keys + (16 * sizeof(unsigned char)), 16 * sizeof(unsigned char));
     cout << "SESSION KEY: " << m_session_key << endl;
     cout << "HMAC KEY: " << m_hmac_key << endl;
 

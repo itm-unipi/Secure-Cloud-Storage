@@ -5,20 +5,25 @@
 #include <string>
 #include <cstdint>
 #include <cstring>
+#include <arpa/inet.h>
 using namespace std;
 
 // --------------------------------------- M1 ---------------------------------------
 
 struct LoginM1 {
 
-    uint8_t ephemeral_key[256];
+    uint8_t ephemeral_key[1024];
+    uint32_t ephemeral_key_size;
     char username[30];
 
     LoginM1() {}
 
-    LoginM1(uint8_t* ephemeral_key, string username) {
+    LoginM1(uint8_t* ephemeral_key, int ephemeral_key_size, string username) {
 
-        memcpy(this->ephemeral_key, ephemeral_key, 256);
+        memset(this->ephemeral_key, 0, sizeof(this->ephemeral_key));
+        memcpy(this->ephemeral_key, ephemeral_key, ephemeral_key_size);
+
+        this->ephemeral_key_size = htonl((unsigned int)ephemeral_key_size);
 
         memset(this->username, 0, sizeof(this->username));
         strcpy(this->username, username.c_str());
@@ -29,8 +34,11 @@ struct LoginM1 {
         uint8_t* buffer = new uint8_t[LoginM1::getSize()];
 
         size_t position = 0;
-        memcpy(buffer, ephemeral_key, 256 * sizeof(uint8_t));
-        position += 256 * sizeof(uint8_t);
+        memcpy(buffer, ephemeral_key, 1024 * sizeof(uint8_t));
+        position += 1024 * sizeof(uint8_t);
+
+        memcpy(buffer + position, &ephemeral_key_size, sizeof(uint32_t));
+        position += sizeof(uint32_t);
 
         memcpy(buffer + position, username, 30 * sizeof(char));
 
@@ -42,8 +50,11 @@ struct LoginM1 {
         LoginM1 loginM1;
 
         size_t position = 0;
-        memcpy(loginM1.ephemeral_key, buffer, 256 * sizeof(uint8_t));
-        position += 256 * sizeof(uint8_t);
+        memcpy(loginM1.ephemeral_key, buffer, 1024 * sizeof(uint8_t));
+        position += 1024 * sizeof(uint8_t);
+
+        memcpy(&loginM1.ephemeral_key_size, buffer + position, sizeof(uint32_t));
+        position += sizeof(uint32_t);
 
         memcpy(loginM1.username, buffer + position, 30 * sizeof(char));
 
@@ -54,7 +65,8 @@ struct LoginM1 {
 
         int size = 0;
 
-        size += 256 * sizeof(uint8_t);
+        size += 1024 * sizeof(uint8_t);
+        size += sizeof(uint32_t);
         size += 30 * sizeof(char);
 
         return size;
@@ -64,6 +76,7 @@ struct LoginM1 {
 
         cout << "---------- LOGIN M1 ----------" << endl;
         cout << "EPHEMERAL KEY:\n" << (char*)ephemeral_key << endl;
+        cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
         cout << "USERNAME: " << username << endl;
         cout << "------------------------------" << endl;
     }
