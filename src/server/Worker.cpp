@@ -32,11 +32,15 @@ int Worker::loginRequest() {
     // prepare the M2 packet
     LoginM2 m2(1);
 
-    // check if username exists (the server must have a file called username)
+    // check if username exists (the server must have a file called username), and retrieve the user's public key
     string filename = "resources/public_keys/" + (string)m1.username + "_key.pem";
     BIO *bp = BIO_new_file(filename.c_str(), "r");
+    EVP_PKEY* user_public_key = nullptr;
     if (!bp)
         m2.result = 0;
+    else
+        user_public_key = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL);
+    BIO_free(bp);
 
     // 2.) send the result of existence of the user
     serialized_packet = m2.serialize();
@@ -103,14 +107,15 @@ int Worker::loginRequest() {
     }
 
     // prepare <g^a,g^b>
-    uint8_t* ephemeral_keys_buffer = new uint8_t[m1.ephemeral_key_size + serialized_ephemeral_key_size];
+    int ephemeral_keys_buffer_size = m1.ephemeral_key_size + serialized_ephemeral_key_size;
+    uint8_t* ephemeral_keys_buffer = new uint8_t[ephemeral_keys_buffer_size];
     memcpy(ephemeral_keys_buffer, m1.ephemeral_key, m1.ephemeral_key_size);
     memcpy(ephemeral_keys_buffer + m1.ephemeral_key_size, serialized_ephemeral_key, serialized_ephemeral_key_size);
 
     // calculate <g^a,g^b>_s
     unsigned char* signature;
     unsigned int signature_size;
-    DigitalSignature::generate(ephemeral_keys_buffer, m1.ephemeral_key_size + serialized_ephemeral_key_size, signature, signature_size, private_key);
+    DigitalSignature::generate(ephemeral_keys_buffer, ephemeral_keys_buffer_size, signature, signature_size, private_key);
 
     // calculate {<g^a,g^b>_s}_Ksess
     unsigned char* ciphertext = nullptr;
@@ -119,16 +124,45 @@ int Worker::loginRequest() {
     AesCbc* encryptor = new AesCbc(ENCRYPT, m_session_key);
     encryptor->run(signature, signature_size, ciphertext, ciphertext_size, iv);
     
-    // 3) prepare and send the M3 packet
+    // 3.) prepare and send the M3 packet
     LoginM3 m3(serialized_ephemeral_key, serialized_ephemeral_key_size, iv, ciphertext, serialized_certificate, serialized_certificate_size);
     serialized_packet = m3.serialize();
-
     res = m_socket->send(serialized_packet, LoginM3::getSize());
     delete[] serialized_packet;
     if (!res) {
         // TODO: errore + delete
     }
 
+    // 4.) receive the M4 packet
+    serialized_packet = new uint8_t[LoginM4::getSize()];
+    res = m_socket->receive(serialized_packet, LoginM4::getSize());
+    if (!res) {
+        // TODO: errore + delete
+    }
+
+    // deserialize the M4 packet
+    LoginM4 m4 = LoginM4::deserialize(serialized_packet);
+
+    // decrypt the encrypted digital signature
+    unsigned char* decrypted_signature = nullptr;
+    int decrypted_signature_size = 0;
+    AesCbc* decryptor = new AesCbc(DECRYPT, m_session_key);
+    iv = m4.iv;
+    decryptor->run(m4.encrypted_signature, 144 * sizeof(uint8_t), decrypted_signature, decrypted_signature_size, iv);
+
+    cout << "DECRYPTED SIGNATURE: ";
+    for (int i = 0; i < decrypted_signature_size; ++i)
+        cout << decrypted_signature[i];
+    cout << endl;
+
+    // verify the signature
+    bool signature_verification = DigitalSignature::verify(ephemeral_keys_buffer, ephemeral_keys_buffer_size, decrypted_signature, decrypted_signature_size, user_public_key);
+    if (signature_verification)
+        cout << "[+] Valid signiture" << endl;
+    else
+        cerr << "[-] Invalid signiture" << endl;
+
+/*
     cout << "SHARED SECRET: ";
     for (int i = 0; i < 256; ++i)
         cout << shared_secret[i];
@@ -143,6 +177,7 @@ int Worker::loginRequest() {
     for (int i = 0; i < 32; ++i)
         cout << m_hmac_key[i];
     cout << endl;
+*/
 
     return 0;
 }

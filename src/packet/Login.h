@@ -239,6 +239,7 @@ struct LoginM3 {
         cout << "---------- LOGIN M3 ----------" << endl;
         cout << "EPHEMERAL KEY:\n" << (char*)ephemeral_key << endl;
         cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
+        cout << "IV:\n" << (char*)iv << endl;
         cout << "ENCRYPTED SIGNATURE:\n" << (char*)encrypted_signature << endl;
         cout << "SERIALIZED CERTIFICATE:\n" << (char*)serialized_certificate << endl;
         cout << "SERIALIZED CERTIFICATE SIZE: " << serialized_certificate_size << endl;
@@ -248,7 +249,64 @@ struct LoginM3 {
 
 // --------------------------------------- M4 ---------------------------------------
 
+struct LoginM4 {
 
+    uint8_t iv[16];
+    uint8_t encrypted_signature[144];
+
+    LoginM4() {}
+
+    LoginM4(uint8_t* iv, uint8_t* encrypted_signature) {
+        
+        memcpy(this->iv, iv, 16 * sizeof(uint8_t));
+        memcpy(this->encrypted_signature, encrypted_signature, 144 * sizeof(uint8_t));
+    }
+
+    uint8_t* serialize() const {
+
+        uint8_t* buffer = new uint8_t[LoginM4::getSize()];
+
+        size_t position = 0;
+        memcpy(buffer, iv, 16 * sizeof(uint8_t));
+        position += 16 * sizeof(uint8_t);
+
+        memcpy(buffer + position, encrypted_signature, 144 * sizeof(uint8_t));
+
+        return buffer;
+    }
+
+    static LoginM4 deserialize(uint8_t* buffer) {
+
+        LoginM4 loginM4;
+
+        size_t position = 0;
+        memcpy(loginM4.iv, buffer, 16 * sizeof(uint8_t));
+        position += 16 * sizeof(uint8_t);
+
+        memcpy(loginM4.encrypted_signature, buffer + position, 144 * sizeof(uint8_t));
+        position += 144 * sizeof(uint8_t);
+
+        return loginM4;
+    }
+
+    static int getSize() {
+
+        int size = 0;
+
+        size += 16 * sizeof(uint8_t);
+        size += 144 * sizeof(uint8_t);
+
+        return size;
+    }
+
+    void print() const {
+
+        cout << "---------- LOGIN M4 ----------" << endl;
+        cout << "IV:\n" << (char*)iv << endl;
+        cout << "ENCRYPTED SIGNATURE:\n" << (char*)encrypted_signature << endl;
+        cout << "------------------------------" << endl;
+    }
+};
 
 // ----------------------------------------------------------------------------------
 

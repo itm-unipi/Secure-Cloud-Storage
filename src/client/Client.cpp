@@ -88,20 +88,63 @@ int Client::login() {
     memcpy(m_session_key, keys, 32 * sizeof(unsigned char));
     memcpy(m_hmac_key, keys + (32 * sizeof(unsigned char)), 32 * sizeof(unsigned char));
     
-    cout << "SHARED SECRET: ";
-    for (int i = 0; i < 256; ++i)
-        cout << shared_secret[i];
+    // prepare <g^a,g^b>
+    int ephemeral_keys_buffer_size = m3.ephemeral_key_size + serialized_ephemeral_key_size;
+    uint8_t* ephemeral_keys_buffer = new uint8_t[ephemeral_keys_buffer_size];
+    memcpy(ephemeral_keys_buffer, serialized_ephemeral_key, serialized_ephemeral_key_size);
+    memcpy(ephemeral_keys_buffer + m3.ephemeral_key_size, m3.ephemeral_key, m3.ephemeral_key_size);
+    
+    // calculate <g^a,g^b>_s
+    unsigned char* signature;
+    unsigned int signature_size;
+    DigitalSignature::generate(ephemeral_keys_buffer, ephemeral_keys_buffer_size, signature, signature_size, m_long_term_key);
+
+    // calculate {<g^a,g^b>_s}_Ksess
+    unsigned char* ciphertext = nullptr;
+    unsigned char* iv = nullptr;
+    int ciphertext_size = 0;
+    AesCbc* encryptor = new AesCbc(ENCRYPT, m_session_key);
+    encryptor->run(signature, signature_size, ciphertext, ciphertext_size, iv);
+
+    cout << "DECRYPTED SIGNATURE: ";
+    for (int i = 0; i < (int)signature_size; ++i)
+        cout << signature[i];
     cout << endl;
 
-    cout << "SESSION KEY: ";
-    for (int i = 0; i < 32; ++i)
-        cout << m_session_key[i];
-    cout << endl;
+/*
+    // retrieve and verify the certificate
+    X509* server_certificate = CertificateStore::deserializeCertificate(m3.serialized_certificate, m3.serialized_certificate_size);
+    CertificateStore* certificate_store = CertificateStore::getStore();
+    if (!certificate_store->verify(server_certificate)) {
+        // TODO: errore + delete
+    }
 
-    cout << "HMAC KEY: ";
-    for (int i = 0; i < 32; ++i)
-        cout << m_hmac_key[i];
-    cout << endl;
+    // retrieve the server public key 
+    EVP_PKEY* server_public_key = certificate_store->getPublicKey(server_certificate);
+
+    // decrypt the encrypted digital signature
+    unsigned char* decrypted_signature = nullptr;
+    int decrypted_signature_size = 0;
+    AesCbc* decryptor = new AesCbc(DECRYPT, m_session_key);
+    iv = m3.iv;
+    decryptor->run(m3.encrypted_signature, 144 * sizeof(uint8_t), decrypted_signature, decrypted_signature_size, iv);
+
+    // verify the signature
+    bool signature_verification = DigitalSignature::verify(ephemeral_keys_buffer, ephemeral_keys_buffer_size, decrypted_signature, decrypted_signature_size, server_public_key);
+    if (signature_verification)
+        cout << "[+] Valid signiture" << endl;
+    else
+        cerr << "[-] Invalid signiture" << endl;
+*/
+
+    // 4.) prepare and send the M4 packet
+    LoginM4 m4(iv, ciphertext);
+    serialized_packet = m4.serialize();
+    res = m_socket->send(serialized_packet, LoginM4::getSize());
+    delete[] serialized_packet;
+    if (!res) {
+        // TODO: errore + delete
+    }
 
     return 0;
 }
