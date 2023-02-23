@@ -19,6 +19,9 @@ Client::~Client() {
 
     delete m_socket;
     EVP_PKEY_free(m_long_term_key);
+    CertificateStore::deleteStore();
+
+    // TODO: sovrascrivere le keys
 }
 
 int Client::login() {
@@ -33,6 +36,8 @@ int Client::login() {
     int res = DiffieHellman::serializeKey(ephemeral_key, serialized_ephemeral_key, serialized_ephemeral_key_size);
     if (res < 0) {
         // TODO: errore + delete
+        EVP_PKEY_free(ephemeral_key);
+        delete[] serialized_ephemeral_key;
         return -1;
     }
 
@@ -43,6 +48,8 @@ int Client::login() {
     delete[] serialized_packet;
     if (res < 0) {
         // TODO: errore + delete
+        EVP_PKEY_free(ephemeral_key);
+        delete[] serialized_ephemeral_key;
         return -2;
     }
 
@@ -51,6 +58,9 @@ int Client::login() {
     res = m_socket->receive(serialized_packet, LoginM2::getSize());
     if (res < 0) {
         // TODO: errore + delete
+        delete[] serialized_packet;
+        EVP_PKEY_free(ephemeral_key);
+        delete[] serialized_ephemeral_key;
         return -3;
     }
 
@@ -60,6 +70,8 @@ int Client::login() {
     if (!result_check) {
         // TODO: errore + delete
         cerr << "User not exists" << endl;
+        EVP_PKEY_free(ephemeral_key);
+        delete[] serialized_ephemeral_key;
         return -4;
     }
 
@@ -68,11 +80,15 @@ int Client::login() {
     res = m_socket->receive(serialized_packet, LoginM3::getSize());
     if (res < 0) {
         // TODO: errore + delete
+        delete[] serialized_packet;
+        EVP_PKEY_free(ephemeral_key);
+        delete[] serialized_ephemeral_key;
         return -5;
     }
 
     // deserialize the M3 packet
     LoginM3 m3 = LoginM3::deserialize(serialized_packet);
+    delete[] serialized_packet;
 
     // retrieve the peer ephemeral key from the M3 packet
     EVP_PKEY* peer_ephemeral_key = DiffieHellman::deserializeKey(m3.ephemeral_key, m3.ephemeral_key_size);
@@ -81,8 +97,12 @@ int Client::login() {
     uint8_t* shared_secret = nullptr;
     size_t shared_secret_size;    
     res = dh.generateSharedSecret(ephemeral_key, peer_ephemeral_key, shared_secret, shared_secret_size);
+    EVP_PKEY_free(ephemeral_key);
+    EVP_PKEY_free(peer_ephemeral_key);
     if (res < 0) {
         // TODO: errore + delete
+        delete[] shared_secret;
+        delete[] serialized_ephemeral_key;
         return -6;
     }
     
@@ -92,12 +112,15 @@ int Client::login() {
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
     memcpy(m_session_key, keys, 32 * sizeof(unsigned char));
     memcpy(m_hmac_key, keys + (32 * sizeof(unsigned char)), 32 * sizeof(unsigned char));
+    delete[] shared_secret;
+    delete[] keys;
     
     // prepare <g^a,g^b>
     int ephemeral_keys_buffer_size = m3.ephemeral_key_size + serialized_ephemeral_key_size;
     uint8_t* ephemeral_keys_buffer = new uint8_t[ephemeral_keys_buffer_size];
     memcpy(ephemeral_keys_buffer, serialized_ephemeral_key, serialized_ephemeral_key_size);
     memcpy(ephemeral_keys_buffer + serialized_ephemeral_key_size, m3.ephemeral_key, m3.ephemeral_key_size);
+    delete[] serialized_ephemeral_key;
     
     // calculate <g^a,g^b>_s
     unsigned char* signature;
@@ -110,17 +133,24 @@ int Client::login() {
     int ciphertext_size = 0;
     AesCbc* encryptor = new AesCbc(ENCRYPT, m_session_key);
     encryptor->run(signature, signature_size, ciphertext, ciphertext_size, iv);
+    delete[] signature;
+    delete encryptor;
 
     // retrieve and verify the certificate
     X509* server_certificate = CertificateStore::deserializeCertificate(m3.serialized_certificate, m3.serialized_certificate_size);
     CertificateStore* certificate_store = CertificateStore::getStore();
     if (!certificate_store->verify(server_certificate)) {
         // TODO: errore + delete
+        X509_free(server_certificate);
+        delete[] ephemeral_keys_buffer;
+        delete[] ciphertext;
+        delete[] iv;
         return -7;
     }
 
     // retrieve the server public key 
     EVP_PKEY* server_public_key = certificate_store->getPublicKey(server_certificate);
+    X509_free(server_certificate);
 
     // decrypt the encrypted digital signature
     unsigned char* decrypted_signature = nullptr;
@@ -128,11 +158,17 @@ int Client::login() {
     AesCbc* decryptor = new AesCbc(DECRYPT, m_session_key);
     unsigned char* signature_iv = m3.iv; 
     decryptor->run(m3.encrypted_signature, 144 * sizeof(uint8_t), decrypted_signature, decrypted_signature_size, signature_iv);
+    delete decryptor;
 
     // verify the signature
     bool signature_verification = DigitalSignature::verify(ephemeral_keys_buffer, ephemeral_keys_buffer_size, decrypted_signature, decrypted_signature_size, server_public_key);
+    delete[] ephemeral_keys_buffer;
+    delete[] decrypted_signature;
+    EVP_PKEY_free(server_public_key);
     if (!signature_verification) {
         cerr << "[-] Invalid signature" << endl;
+        delete[] ciphertext;
+        delete[] iv;
         return -8;
     }
 
@@ -141,6 +177,8 @@ int Client::login() {
     serialized_packet = m4.serialize();
     res = m_socket->send(serialized_packet, LoginM4::getSize());
     delete[] serialized_packet;
+    delete[] ciphertext;
+    delete[] iv;
     if (res < 0) {
         // TODO: errore + delete
         return -9;
