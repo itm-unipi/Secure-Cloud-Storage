@@ -117,7 +117,7 @@ int Client::login() {
     }
     
     // generate the session key and hmac key
-    unsigned char* keys;
+    unsigned char* keys = nullptr;
     unsigned int keys_size;
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
     memcpy(m_session_key, keys, 32 * sizeof(unsigned char));
@@ -138,7 +138,7 @@ int Client::login() {
     delete[] serialized_ephemeral_key;
     
     // calculate <g^a,g^b>_s
-    unsigned char* signature;
+    unsigned char* signature = nullptr;
     unsigned int signature_size;
     DigitalSignature::generate(ephemeral_keys_buffer, ephemeral_keys_buffer_size, signature, signature_size, m_long_term_key);
 

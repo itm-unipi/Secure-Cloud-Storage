@@ -104,7 +104,7 @@ int Worker::loginRequest() {
     }
     
     // generate the session key and hmac key
-    unsigned char* keys;
+    unsigned char* keys = nullptr;
     unsigned int keys_size;
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
     memcpy(m_session_key, keys, 32 * sizeof(unsigned char));
