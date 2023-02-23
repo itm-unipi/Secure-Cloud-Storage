@@ -11,6 +11,13 @@
 
 using namespace std;
 
+/*
+    cout << "HMAC KEY: ";
+    for (int i = 0; i < 32; ++i)
+        cout << m_hmac_key[i];
+    cout << endl;
+*/
+
 // --------------------------------------- M1 ---------------------------------------
 
 struct LoginM1 {

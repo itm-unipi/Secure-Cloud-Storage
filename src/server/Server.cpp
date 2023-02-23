@@ -35,7 +35,8 @@ int Server::run() {
         // accept a connection from a new client
         CommunicationSocket* communication_socket = m_socket->accept();
         if (!communication_socket) {
-            // TODO: errore
+            cerr << "[-] (Server) Failed to accept a connection from a client" << endl;
+            continue;
         }
 
         // create a worker thread that serves the client
@@ -43,5 +44,10 @@ int Server::run() {
             // create and start the worker
             Worker(socket).run();
         }, communication_socket));
+
+        // TODO: da togliere
+        break;
     }
+
+    return 0;
 }
