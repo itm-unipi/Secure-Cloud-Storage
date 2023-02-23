@@ -11,8 +11,11 @@
 
 using namespace std;
 
-Client::Client() {
-
+Client::Client(bool verbose) { 
+    
+    this->verbose = verbose; 
+    this->m_socket = nullptr;
+    this->m_long_term_key = nullptr;
 }
 
 Client::~Client() {
@@ -21,7 +24,11 @@ Client::~Client() {
     EVP_PKEY_free(m_long_term_key);
     CertificateStore::deleteStore();
 
-    // TODO: sovrascrivere le keys
+    // overwrite session key and hmac key
+    #pragma optimize("", off)
+    memset(m_session_key, 0, sizeof(m_session_key));
+    memset(m_hmac_key, 0, sizeof(m_hmac_key));
+    #pragma optimize("", on)
 }
 
 int Client::login() {
@@ -35,7 +42,6 @@ int Client::login() {
     int serialized_ephemeral_key_size;
     int res = DiffieHellman::serializeKey(ephemeral_key, serialized_ephemeral_key, serialized_ephemeral_key_size);
     if (res < 0) {
-        // TODO: errore + delete
         EVP_PKEY_free(ephemeral_key);
         delete[] serialized_ephemeral_key;
         return -1;
@@ -47,29 +53,30 @@ int Client::login() {
     res = m_socket->send(serialized_packet, LoginM1::getSize());
     delete[] serialized_packet;
     if (res < 0) {
-        // TODO: errore + delete
         EVP_PKEY_free(ephemeral_key);
         delete[] serialized_ephemeral_key;
         return -2;
     }
 
+    LOG("(Login) Ephemeral key and username sent to the server");
+
     // 2.) receive the result of existence of the user
     serialized_packet = new uint8_t[LoginM2::getSize()];
     res = m_socket->receive(serialized_packet, LoginM2::getSize());
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
         EVP_PKEY_free(ephemeral_key);
         delete[] serialized_ephemeral_key;
         return -3;
     }
 
+    LOG("(Login) Received username check result from the server");
+
     // check if the server found the username
     uint8_t result_check = LoginM2::deserialize(serialized_packet).result;
     delete[] serialized_packet;
     if (!result_check) {
-        // TODO: errore + delete
-        cerr << "User not exists" << endl;
+        cerr << "[-] (Login) User not exists" << endl;
         EVP_PKEY_free(ephemeral_key);
         delete[] serialized_ephemeral_key;
         return -4;
@@ -79,12 +86,13 @@ int Client::login() {
     serialized_packet = new uint8_t[LoginM3::getSize()];
     res = m_socket->receive(serialized_packet, LoginM3::getSize());
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
         EVP_PKEY_free(ephemeral_key);
         delete[] serialized_ephemeral_key;
         return -5;
     }
+
+    LOG("(Login) Received ephemeral key, signature and certificate from the server");
 
     // deserialize the M3 packet
     LoginM3 m3 = LoginM3::deserialize(serialized_packet);
@@ -100,7 +108,9 @@ int Client::login() {
     EVP_PKEY_free(ephemeral_key);
     EVP_PKEY_free(peer_ephemeral_key);
     if (res < 0) {
-        // TODO: errore + delete
+        #pragma optimize("", off)
+        memset(shared_secret, 0, shared_secret_size);
+        #pragma optimize("", on)
         delete[] shared_secret;
         delete[] serialized_ephemeral_key;
         return -6;
@@ -112,8 +122,13 @@ int Client::login() {
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
     memcpy(m_session_key, keys, 32 * sizeof(unsigned char));
     memcpy(m_hmac_key, keys + (32 * sizeof(unsigned char)), 32 * sizeof(unsigned char));
+    #pragma optimize("", off)
+    memset(shared_secret, 0, shared_secret_size);
+    #pragma optimize("", on)
     delete[] shared_secret;
     delete[] keys;
+
+    LOG("(Login) Generated session key and HMAC key");
     
     // prepare <g^a,g^b>
     int ephemeral_keys_buffer_size = m3.ephemeral_key_size + serialized_ephemeral_key_size;
@@ -140,13 +155,14 @@ int Client::login() {
     X509* server_certificate = CertificateStore::deserializeCertificate(m3.serialized_certificate, m3.serialized_certificate_size);
     CertificateStore* certificate_store = CertificateStore::getStore();
     if (!certificate_store->verify(server_certificate)) {
-        // TODO: errore + delete
         X509_free(server_certificate);
         delete[] ephemeral_keys_buffer;
         delete[] ciphertext;
         delete[] iv;
         return -7;
     }
+
+    LOG("(Login) Verified server certificate");
 
     // retrieve the server public key 
     EVP_PKEY* server_public_key = certificate_store->getPublicKey(server_certificate);
@@ -166,11 +182,12 @@ int Client::login() {
     delete[] decrypted_signature;
     EVP_PKEY_free(server_public_key);
     if (!signature_verification) {
-        cerr << "[-] Invalid signature" << endl;
         delete[] ciphertext;
         delete[] iv;
         return -8;
     }
+
+    LOG("(Login) Verified server signature");
 
     // 4.) prepare and send the M4 packet
     LoginM4 m4(iv, ciphertext);
@@ -180,9 +197,10 @@ int Client::login() {
     delete[] ciphertext;
     delete[] iv;
     if (res < 0) {
-        // TODO: errore + delete
         return -9;
     }
+
+    LOG("(Login) Sent signature to the server");
 
     return 0;
 }
@@ -211,6 +229,10 @@ int Client::run() {
         cerr << "[-] (Client) Not valid username" << endl;
         return -1;
     }
+    if (m_username.length() >= 30) {
+        cerr << "[-] (Client) Username too long" << endl;
+        return -1;
+    } 
 
     // open the private key PEM file
     string private_key_file = "resources/encrypted_keys/" + m_username + "_key.pem";
@@ -235,8 +257,10 @@ int Client::run() {
     // ----------------------------------------------
 
     int res = login();
-    if (res != 0)
+    if (res != 0) {
+        cerr << "[-] (Login) Failed with error code " << res << endl;
         return -1;
+    }
 
     while (1) {
         

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstring>
 using namespace std;
 
 #ifdef SERVER_APPLICATION
@@ -19,7 +20,13 @@ void signalHandler(int signum) {
 
 #endif
 
-int main() {
+int main(int argc, char** argv) {
+
+    // read the verbose parameter
+    bool verbose = false;
+    if (argc > 1) {
+        verbose = (strcmp(argv[1], "-v") == 0);
+    }
 
 #ifdef SERVER_APPLICATION
 
@@ -32,7 +39,7 @@ int main() {
 #elif CLIENT_APPLICATION
 
     while (1) {
-        if (Client().run() == 1)
+        if (Client(verbose).run() == 1)
             break;
     }
 
