@@ -50,7 +50,8 @@ int CommunicationSocket::send(uint8_t* input_buffer, int input_buffer_size) {
 int CommunicationSocket::receive(uint8_t* output_buffer, int output_buffer_size) {
 
     int ret = recv(m_communication_socket, (void*)output_buffer, output_buffer_size, MSG_WAITALL);
-    if (ret == -1) {
+    
+    if (ret <= 0) {
         cerr << "[-] (CommunicationSocket) Failed to receive a message" << endl;
         return -1;
     }

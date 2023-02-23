@@ -17,6 +17,8 @@ Client::Client() {
 
 Client::~Client() {
 
+    delete m_socket;
+    EVP_PKEY_free(m_long_term_key);
 }
 
 int Client::login() {
@@ -29,8 +31,9 @@ int Client::login() {
     uint8_t* serialized_ephemeral_key = nullptr;
     int serialized_ephemeral_key_size;
     int res = DiffieHellman::serializeKey(ephemeral_key, serialized_ephemeral_key, serialized_ephemeral_key_size);
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -1;
     }
 
     // 1.) send ephemeral key and username
@@ -38,15 +41,17 @@ int Client::login() {
     uint8_t* serialized_packet = m1.serialize();
     res = m_socket->send(serialized_packet, LoginM1::getSize());
     delete[] serialized_packet;
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -2;
     }
 
     // 2.) receive the result of existence of the user
     serialized_packet = new uint8_t[LoginM2::getSize()];
     res = m_socket->receive(serialized_packet, LoginM2::getSize());
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -3;
     }
 
     // check if the server found the username
@@ -55,16 +60,15 @@ int Client::login() {
     if (!result_check) {
         // TODO: errore + delete
         cerr << "User not exists" << endl;
-        return -1;
+        return -4;
     }
-
-    cout << "User exists" << endl;
 
     // 3.) receive the M3 packet
     serialized_packet = new uint8_t[LoginM3::getSize()];
     res = m_socket->receive(serialized_packet, LoginM3::getSize());
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -5;
     }
 
     // deserialize the M3 packet
@@ -77,8 +81,9 @@ int Client::login() {
     uint8_t* shared_secret = nullptr;
     size_t shared_secret_size;    
     res = dh.generateSharedSecret(ephemeral_key, peer_ephemeral_key, shared_secret, shared_secret_size);
-    if (res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -6;
     }
     
     // generate the session key and hmac key
@@ -92,7 +97,7 @@ int Client::login() {
     int ephemeral_keys_buffer_size = m3.ephemeral_key_size + serialized_ephemeral_key_size;
     uint8_t* ephemeral_keys_buffer = new uint8_t[ephemeral_keys_buffer_size];
     memcpy(ephemeral_keys_buffer, serialized_ephemeral_key, serialized_ephemeral_key_size);
-    memcpy(ephemeral_keys_buffer + m3.ephemeral_key_size, m3.ephemeral_key, m3.ephemeral_key_size);
+    memcpy(ephemeral_keys_buffer + serialized_ephemeral_key_size, m3.ephemeral_key, m3.ephemeral_key_size);
     
     // calculate <g^a,g^b>_s
     unsigned char* signature;
@@ -106,17 +111,12 @@ int Client::login() {
     AesCbc* encryptor = new AesCbc(ENCRYPT, m_session_key);
     encryptor->run(signature, signature_size, ciphertext, ciphertext_size, iv);
 
-    cout << "DECRYPTED SIGNATURE: ";
-    for (int i = 0; i < (int)signature_size; ++i)
-        cout << signature[i];
-    cout << endl;
-
-/*
     // retrieve and verify the certificate
     X509* server_certificate = CertificateStore::deserializeCertificate(m3.serialized_certificate, m3.serialized_certificate_size);
     CertificateStore* certificate_store = CertificateStore::getStore();
     if (!certificate_store->verify(server_certificate)) {
         // TODO: errore + delete
+        return -7;
     }
 
     // retrieve the server public key 
@@ -126,24 +126,24 @@ int Client::login() {
     unsigned char* decrypted_signature = nullptr;
     int decrypted_signature_size = 0;
     AesCbc* decryptor = new AesCbc(DECRYPT, m_session_key);
-    iv = m3.iv;
-    decryptor->run(m3.encrypted_signature, 144 * sizeof(uint8_t), decrypted_signature, decrypted_signature_size, iv);
+    unsigned char* signature_iv = m3.iv; 
+    decryptor->run(m3.encrypted_signature, 144 * sizeof(uint8_t), decrypted_signature, decrypted_signature_size, signature_iv);
 
     // verify the signature
     bool signature_verification = DigitalSignature::verify(ephemeral_keys_buffer, ephemeral_keys_buffer_size, decrypted_signature, decrypted_signature_size, server_public_key);
-    if (signature_verification)
-        cout << "[+] Valid signiture" << endl;
-    else
-        cerr << "[-] Invalid signiture" << endl;
-*/
+    if (!signature_verification) {
+        cerr << "[-] Invalid signature" << endl;
+        return -8;
+    }
 
     // 4.) prepare and send the M4 packet
     LoginM4 m4(iv, ciphertext);
     serialized_packet = m4.serialize();
     res = m_socket->send(serialized_packet, LoginM4::getSize());
     delete[] serialized_packet;
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -9;
     }
 
     return 0;
@@ -190,13 +190,15 @@ int Client::run() {
     try {
         m_socket = new CommunicationSocket(SERVER_IP, SERVER_PORT);
     } catch (const std::exception& e) {
-        std::cerr << "[-] (Client) Exeption: " << e.what() << std::endl;
+        std::cerr << "[-] (Client) Exception: " << e.what() << std::endl;
         return -3;
     }
 
     // ----------------------------------------------
 
-    login();
+    int res = login();
+    if (res != 0)
+        return -1;
 
     while (1) {
         

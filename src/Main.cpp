@@ -35,7 +35,6 @@ int main() {
         if (Client().run() == 1)
             break;
     }
-    
 
 #else
     cerr << "Entità non riconosciuta" << endl;

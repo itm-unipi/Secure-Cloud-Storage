@@ -209,8 +209,7 @@ struct LoginM3 {
         memcpy(loginM3.encrypted_signature, buffer + position, 144 * sizeof(uint8_t));
         position += 144 * sizeof(uint8_t);
 
-        uint8_t serialized_certificate[MAX_SERIALIZED_CERTIFICATE_SIZE];
-        memcpy(serialized_certificate, buffer + position, MAX_SERIALIZED_CERTIFICATE_SIZE);
+        memcpy(loginM3.serialized_certificate, buffer + position, MAX_SERIALIZED_CERTIFICATE_SIZE);
         position += MAX_SERIALIZED_CERTIFICATE_SIZE;
 
         uint32_t serialized_certificate_size_hton = 0;

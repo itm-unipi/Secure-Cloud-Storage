@@ -21,8 +21,9 @@ int Worker::loginRequest() {
     // 1.) receive ephemeral key and username
     uint8_t* serialized_packet = new uint8_t[LoginM1::getSize()];
     int res = m_socket->receive(serialized_packet, LoginM1::getSize());
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -1;
     }
 
     // deserialize packet and get the client ephemeral key
@@ -46,23 +47,26 @@ int Worker::loginRequest() {
     serialized_packet = m2.serialize();
     res = m_socket->send(serialized_packet, LoginM2::getSize());
     delete[] serialized_packet;
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -2;
     }
 
     // if user not exists stop the worker
     if (!m2.result)
-        return -2;
+        return -3;
 
     // extract the server private key
     filename = "resources/private_keys/server_key.pem";
     bp = BIO_new_file(filename.c_str(), "r");
     if (!bp) {
         // TODO: errore + delete
+        return -4;
     }
     EVP_PKEY* private_key = PEM_read_bio_PrivateKey(bp, NULL, NULL, NULL);
     if (!private_key) {
         // TODO: errore + delete
+        return -5;
     }
     BIO_free(bp); 
 
@@ -77,8 +81,9 @@ int Worker::loginRequest() {
     uint8_t* shared_secret = nullptr;
     size_t shared_secret_size;
     res = dh.generateSharedSecret(ephemeral_key, peer_ephemeral_key, shared_secret, shared_secret_size);
-    if (res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -6;
     }
     
     // generate the session key and hmac key
@@ -102,8 +107,9 @@ int Worker::loginRequest() {
     uint8_t* serialized_ephemeral_key = nullptr;
     int serialized_ephemeral_key_size;
     res = DiffieHellman::serializeKey(ephemeral_key, serialized_ephemeral_key, serialized_ephemeral_key_size);
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -7;
     }
 
     // prepare <g^a,g^b>
@@ -129,15 +135,17 @@ int Worker::loginRequest() {
     serialized_packet = m3.serialize();
     res = m_socket->send(serialized_packet, LoginM3::getSize());
     delete[] serialized_packet;
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -8;
     }
 
     // 4.) receive the M4 packet
     serialized_packet = new uint8_t[LoginM4::getSize()];
     res = m_socket->receive(serialized_packet, LoginM4::getSize());
-    if (!res) {
+    if (res < 0) {
         // TODO: errore + delete
+        return -9;
     }
 
     // deserialize the M4 packet
@@ -150,17 +158,12 @@ int Worker::loginRequest() {
     iv = m4.iv;
     decryptor->run(m4.encrypted_signature, 144 * sizeof(uint8_t), decrypted_signature, decrypted_signature_size, iv);
 
-    cout << "DECRYPTED SIGNATURE: ";
-    for (int i = 0; i < decrypted_signature_size; ++i)
-        cout << decrypted_signature[i];
-    cout << endl;
-
     // verify the signature
     bool signature_verification = DigitalSignature::verify(ephemeral_keys_buffer, ephemeral_keys_buffer_size, decrypted_signature, decrypted_signature_size, user_public_key);
-    if (signature_verification)
-        cout << "[+] Valid signiture" << endl;
-    else
-        cerr << "[-] Invalid signiture" << endl;
+    if (!signature_verification) {
+        cerr << "[-] Invalid signature" << endl;
+        return -10;
+    }
 
 /*
     cout << "SHARED SECRET: ";
