@@ -137,13 +137,13 @@ int CertificateStore::serializeCertificate(X509* certificate, uint8_t*& serializ
 
     BIO* bio = BIO_new(BIO_s_mem());
     if (!bio) {
-        cerr << "[-] Failed to create BIO" << endl; 
+        cerr << "[-] (CertificateStore) Failed to create BIO" << endl; 
         return -1;
     }
 
     int result = PEM_write_bio_X509(bio, certificate);
     if (!result) {
-        cerr << "[-] Failed to write the certificate in the BIO" << endl; 
+        cerr << "[-] (CertificateStore) Failed to write the certificate in the BIO" << endl; 
         BIO_free(bio);
         return -1;
     }
@@ -153,7 +153,7 @@ int CertificateStore::serializeCertificate(X509* certificate, uint8_t*& serializ
 
     result = BIO_read(bio, serialized_certificate, serialized_certificate_size);
     if (result != serialized_certificate_size) {
-        cerr << "[-] Failed to read the serialized certificate" << endl;
+        cerr << "[-] (CertificateStore) Failed to read the serialized certificate" << endl;
         BIO_free(bio);
         delete[] serialized_certificate;
         return -1;
@@ -167,14 +167,14 @@ X509* CertificateStore::deserializeCertificate(uint8_t* serialized_certificate, 
 
     BIO* bio = BIO_new_mem_buf(serialized_certificate, serialized_certificate_size);
     if (!bio) {
-        cerr << "[-] Failed to create BIO" << endl;
+        cerr << "[-] (CertificateStore) Failed to create BIO" << endl;
         return nullptr;
     }
 
     X509* deserialized_certificate = nullptr;
     deserialized_certificate = PEM_read_bio_X509(bio, NULL, NULL, NULL);
     if (!deserialized_certificate) {
-        cerr << "[-] Failed to deserialize certificate" << endl;
+        cerr << "[-] (CertificateStore) Failed to deserialize certificate" << endl;
         BIO_free(bio);
         return nullptr;
     }
