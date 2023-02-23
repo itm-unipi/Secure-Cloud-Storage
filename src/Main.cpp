@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     // register the signal handler for SIGINT
     signal(SIGINT, signalHandler);
     
-    Server::getInstace()->run();
+    Server::getInstace()->run(verbose);
     Server::closeInstance();
 
 #elif CLIENT_APPLICATION

@@ -8,13 +8,13 @@
 #include "../security/DigitalSignature.h"
 #include "../security/AesCbc.h"
 
-Worker::Worker(CommunicationSocket* socket) {
+Worker::Worker(CommunicationSocket* socket, bool verbose) {
     m_socket = socket;
+    m_verbose = verbose;
 }
 
 Worker::~Worker() {
     delete m_socket;
-    CertificateStore::deleteStore();
 }
 
 int Worker::loginRequest() {
@@ -24,12 +24,15 @@ int Worker::loginRequest() {
     int res = m_socket->receive(serialized_packet, LoginM1::getSize());
     if (res < 0) {
         // TODO: errore + delete
+        delete[] serialized_packet;
         return -1;
     }
 
+    LOG("(LoginRequest) Received ephemeral key and username from the client");
+
     // deserialize packet and get the client ephemeral key
     LoginM1 m1 = LoginM1::deserialize(serialized_packet);
-    delete[] serialized_packet; /*TOIF*/
+    delete[] serialized_packet;
 
     // prepare the M2 packet
     LoginM2 m2(1);
@@ -50,12 +53,17 @@ int Worker::loginRequest() {
     delete[] serialized_packet;
     if (res < 0) {
         // TODO: errore + delete
+        EVP_PKEY_free(user_public_key);
         return -2;
     }
 
+    LOG("(LoginRequest) Send the username check result to the client");
+
     // if user not exists stop the worker
-    if (!m2.result)
+    if (!m2.result) {
+        EVP_PKEY_free(user_public_key);
         return -3;
+    }
 
     // extract the server private key
     filename = "resources/private_keys/server_key.pem";
@@ -68,6 +76,7 @@ int Worker::loginRequest() {
     BIO_free(bp); 
     if (!private_key) {
         // TODO: errore + delete
+        EVP_PKEY_free(user_public_key);
         return -5;
     }
 
@@ -84,7 +93,13 @@ int Worker::loginRequest() {
     res = dh.generateSharedSecret(ephemeral_key, peer_ephemeral_key, shared_secret, shared_secret_size);
     EVP_PKEY_free(peer_ephemeral_key);
     if (res < 0) {
-        // TODO: errore + delete
+        #pragma optimize("", off)
+        memset(shared_secret, 0, shared_secret_size);
+        #pragma optimize("", on)
+        delete[] shared_secret;
+        EVP_PKEY_free(ephemeral_key);
+        EVP_PKEY_free(private_key);
+        EVP_PKEY_free(user_public_key);
         return -6;
     }
     
@@ -97,8 +112,10 @@ int Worker::loginRequest() {
     #pragma optimize("", off)
     memset(shared_secret, 0, shared_secret_size);
     #pragma optimize("", on)
-    delete[] shared_secret; /*TOIF*/
+    delete[] shared_secret;
     delete[] keys;
+
+    LOG("(LoginRequest) Generated session key and HMAC key");
 
     // load certificate from PEM
     string certificate_filename = "resources/certificates/Server_certificate.pem";
@@ -115,9 +132,13 @@ int Worker::loginRequest() {
     uint8_t* serialized_ephemeral_key = nullptr;
     int serialized_ephemeral_key_size;
     res = DiffieHellman::serializeKey(ephemeral_key, serialized_ephemeral_key, serialized_ephemeral_key_size);
-    EVP_PKEY_free(ephemeral_key); /*TOIF*/
+    EVP_PKEY_free(ephemeral_key);
     if (res < 0) {
         // TODO: errore + delete
+        EVP_PKEY_free(private_key);
+        delete[] serialized_certificate;
+        delete[] serialized_ephemeral_key;
+        EVP_PKEY_free(user_public_key);
         return -7;
     }
 
@@ -131,7 +152,7 @@ int Worker::loginRequest() {
     unsigned char* signature = nullptr;
     unsigned int signature_size;
     DigitalSignature::generate(ephemeral_keys_buffer, ephemeral_keys_buffer_size, signature, signature_size, private_key);
-    EVP_PKEY_free(private_key); /*TOIF*/
+    EVP_PKEY_free(private_key);
 
     // calculate {<g^a,g^b>_s}_Ksess
     unsigned char* ciphertext = nullptr;
@@ -147,26 +168,35 @@ int Worker::loginRequest() {
     serialized_packet = m3.serialize();
     res = m_socket->send(serialized_packet, LoginM3::getSize());
     delete[] serialized_packet;
-    delete[] serialized_certificate; /*TOIF*/
-    delete[] serialized_ephemeral_key; /*TOIF*/
+    delete[] serialized_certificate;
+    delete[] serialized_ephemeral_key;
     delete[] ciphertext;
     delete[] iv;
     if (res < 0) {
         // TODO: errore + delete
+        EVP_PKEY_free(user_public_key);
+        delete[] ephemeral_keys_buffer;
         return -8;
     }
+
+    LOG("(LoginRequest) Sent ephemeral key, signature and certificate to the client");
 
     // 4.) receive the M4 packet
     serialized_packet = new uint8_t[LoginM4::getSize()];
     res = m_socket->receive(serialized_packet, LoginM4::getSize());
     if (res < 0) {
         // TODO: errore + delete
+        delete[] serialized_packet;
+        EVP_PKEY_free(user_public_key);
+        delete[] ephemeral_keys_buffer;
         return -9;
     }
 
+    LOG("(LoginRequest) Received signature from the client");
+
     // deserialize the M4 packet
     LoginM4 m4 = LoginM4::deserialize(serialized_packet);
-    delete[] serialized_packet; /*TOIF*/
+    delete[] serialized_packet;
 
     // decrypt the encrypted digital signature
     unsigned char* decrypted_signature = nullptr;
@@ -178,13 +208,15 @@ int Worker::loginRequest() {
 
     // verify the signature
     bool signature_verification = DigitalSignature::verify(ephemeral_keys_buffer, ephemeral_keys_buffer_size, decrypted_signature, decrypted_signature_size, user_public_key);
-    EVP_PKEY_free(user_public_key); /*TOIF*/
-    delete[] ephemeral_keys_buffer; /*TOIF*/
+    EVP_PKEY_free(user_public_key);
+    delete[] ephemeral_keys_buffer;
     delete[] decrypted_signature;
     if (!signature_verification) {
         cerr << "[-] Invalid signature" << endl;
         return -10;
     }
+
+    LOG("(LoginRequest) Verified client signature");
 
     return 0;
 }
@@ -195,6 +227,11 @@ int Worker::logoutRequest() {
 
 int Worker::run() {
 
-    loginRequest();
+    int res = loginRequest();
+    if (res != 0) {
+        cerr << "[-] (LoginRequest) Failed with error code " << res << endl;
+        return -1;
+    }
+
     return 0;
 }

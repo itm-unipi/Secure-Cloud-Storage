@@ -21,7 +21,7 @@ public:
     Server(const Server&) = delete;
     ~Server();
 
-    int run();
+    int run(bool verbose);
 
     static Server* getInstace() {
         if (!m_instance)

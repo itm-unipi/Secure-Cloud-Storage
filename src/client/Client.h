@@ -4,7 +4,7 @@
 #define SERVER_IP "localhost"
 #define SERVER_PORT 6000
 
-#define LOG(...) if (verbose) { cout << "[i] " << __VA_ARGS__ << endl; }
+#define LOG(...) if (m_verbose) { cout << "[i] " << __VA_ARGS__ << endl; }
 
 #include <iostream>
 #include <openssl/evp.h>
@@ -20,7 +20,7 @@ class Client {
     EVP_PKEY* m_long_term_key;
     unsigned char m_session_key[32];
     unsigned char m_hmac_key[32];
-    bool verbose;
+    bool m_verbose;
 
     int login();
     int logout();

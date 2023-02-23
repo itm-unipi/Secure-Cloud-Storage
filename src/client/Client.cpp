@@ -13,9 +13,9 @@ using namespace std;
 
 Client::Client(bool verbose) { 
     
-    this->verbose = verbose; 
-    this->m_socket = nullptr;
-    this->m_long_term_key = nullptr;
+    m_verbose = verbose; 
+    m_socket = nullptr;
+    m_long_term_key = nullptr;
 }
 
 Client::~Client() {

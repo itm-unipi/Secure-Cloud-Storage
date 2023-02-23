@@ -2,6 +2,7 @@
 
 #include "Server.h"
 #include "Worker.h"
+#include "../security/CertificateStore.h"
 
 using namespace std;
 
@@ -20,15 +21,16 @@ Server::Server() {
 
 Server::~Server() {
     
-    // close the listening socket
+    // close the listening socket and the certificate store
     delete m_socket;
+    CertificateStore::deleteStore();
 
     // wait the active threads
     for (auto& thread : m_thread_pool)
         thread.join();
 }
 
-int Server::run() {
+int Server::run(bool verbose) {
 
     while (1) {
 
@@ -40,13 +42,10 @@ int Server::run() {
         }
 
         // create a worker thread that serves the client
-        m_thread_pool.push_back(thread([] (CommunicationSocket* socket) {
+        m_thread_pool.push_back(thread([] (CommunicationSocket* socket, bool verbose) {
             // create and start the worker
-            Worker(socket).run();
-        }, communication_socket));
-
-        // TODO: da togliere
-        break;
+            Worker(socket, verbose).run();
+        }, communication_socket, verbose));
     }
 
     return 0;
