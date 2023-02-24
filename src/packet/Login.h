@@ -88,7 +88,10 @@ struct LoginM1 {
     void print() const {
 
         cout << "---------- LOGIN M1 ----------" << endl;
-        cout << "EPHEMERAL KEY:\n" << (char*)ephemeral_key << endl;
+        cout << "EPHEMERAL KEY:" << endl;
+        for (int i = 0; i < 1024; ++i)
+            cout << ephemeral_key[i];
+        cout << endl;
         cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
         cout << "USERNAME: " << username << endl;
         cout << "------------------------------" << endl;
@@ -243,11 +246,23 @@ struct LoginM3 {
     void print() const {
 
         cout << "---------- LOGIN M3 ----------" << endl;
-        cout << "EPHEMERAL KEY:\n" << (char*)ephemeral_key << endl;
+        cout << "EPHEMERAL KEY:" << endl;
+        for (int i = 0; i < 1024; ++i)
+            cout << ephemeral_key[i];
+        cout << endl;
         cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
-        cout << "IV:\n" << (char*)iv << endl;
-        cout << "ENCRYPTED SIGNATURE:\n" << (char*)encrypted_signature << endl;
-        cout << "SERIALIZED CERTIFICATE:\n" << (char*)serialized_certificate << endl;
+        cout << "IV:" << endl;
+        for (int i = 0; i < 16; ++i)
+            cout << iv[i];
+        cout << endl;
+        cout << "ENCRYPTED SIGNATURE:" << endl;
+        for (int i = 0; i < 144; ++i)
+            cout << encrypted_signature[i];
+        cout << endl;
+        cout << "SERIALIZED CERTIFICATE:" << endl;
+        for (int i = 0; i < (int)serialized_certificate_size; ++i)
+            cout << serialized_certificate[i];
+        cout << endl;
         cout << "SERIALIZED CERTIFICATE SIZE: " << serialized_certificate_size << endl;
         cout << "------------------------------" << endl;
     }
@@ -308,14 +323,18 @@ struct LoginM4 {
     void print() const {
 
         cout << "---------- LOGIN M4 ----------" << endl;
-        cout << "IV:\n" << (char*)iv << endl;
-        cout << "ENCRYPTED SIGNATURE:\n" << (char*)encrypted_signature << endl;
+        cout << "IV:" << endl;
+        for (int i = 0; i < 16; ++i)
+            cout << iv[i];
+        cout << endl;
+        cout << "ENCRYPTED SIGNATURE:" << endl;
+        for (int i = 0; i < 144; ++i)
+            cout << encrypted_signature[i];
+        cout << endl;
         cout << "------------------------------" << endl;
     }
 };
 
 // ----------------------------------------------------------------------------------
-
-
 
 #endif // _LOGINPACKETS_H
