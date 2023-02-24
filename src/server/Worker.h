@@ -16,6 +16,8 @@ class Worker {
     int loginRequest();
     int logoutRequest();
 
+    bool incrementCounter(uint32_t& counter);
+
 public:
     Worker(CommunicationSocket* socket, bool verbose);
     Worker(const Worker&) = delete;

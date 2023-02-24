@@ -2,7 +2,9 @@
 #include <openssl/evp.h>
 
 #include "Worker.h"
+#include "../packet/GenericPacket.h"
 #include "../packet/Login.h"
+#include "../packet/Logout.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
@@ -11,10 +13,14 @@
 Worker::Worker(CommunicationSocket* socket, bool verbose) {
     m_socket = socket;
     m_verbose = verbose;
+
+    cout << "[+] (Server) Instantiated new worker" << endl;
 }
 
 Worker::~Worker() {
     delete m_socket;
+
+    cout << "[+] (Server) Worker closed" << endl;
 }
 
 int Worker::loginRequest() {
@@ -225,12 +231,57 @@ int Worker::logoutRequest() {
     return 0;
 }
 
+bool Worker::incrementCounter(uint32_t& counter) {
+
+    // check if renegotiation is needed
+    if (counter == MAX_COUNTER_VALUE) {
+        int res = loginRequest();
+        if (res != 0)
+            return false;
+        counter = 0;
+    } else {
+        counter++;
+    }
+
+    return true;
+}
+
 int Worker::run() {
 
     int res = loginRequest();
     if (res != 0) {
         cerr << "[-] (LoginRequest) Failed with error code " << res << endl;
         return -1;
+    }
+
+    while (1) {
+
+        // 1.) receive the generic packet
+        uint8_t* serialized_packet = new uint8_t[GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE)];
+        int res = m_socket->receive(serialized_packet, GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE));
+        if (res < 0) {
+            // TODO: errore + delete
+            delete[] serialized_packet;
+            return -1;
+        }
+
+        // deserialize the generic packet and verify the fingerprint
+        GenericPacket generic_m1 = GenericPacket::deserialize(serialized_packet, GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE));
+        delete[] serialized_packet;
+        generic_m1.print();
+        bool verification_res = generic_m1.verifyHMAC(m_hmac_key);
+        if (!verification_res) {
+            cerr << "[-] (Run) HMAC verification failed" << endl;
+            return -2;
+        }
+
+        // parse the command
+        uint8_t* plaintext = nullptr;
+        int plaintext_size = 0;
+        uint8_t command_code = generic_m1.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+
+        cout << "Received command: " << printCommandCodeDescription(command_code) << endl; 
+        return 0;
     }
 
     return 0;

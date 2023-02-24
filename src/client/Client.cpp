@@ -3,7 +3,9 @@
 #include <openssl/pem.h>
 
 #include "Client.h"
+#include "../packet/GenericPacket.h"
 #include "../packet/Login.h"
+#include "../packet/Logout.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
@@ -202,11 +204,50 @@ int Client::login() {
 
     LOG("(Login) Sent signature to the server");
 
+    // reset the counter
+    m_counter = 0;
     return 0;
 }
 
 int Client::logout() {
+
+    // create the M1 packet
+    LogoutM1 m1(m_counter);
+    uint8_t* serialized_packet = m1.serialize();
+
+    // create generic packet
+    GenericPacket generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    generic_m1.print();
+
+    // 1.) send generic packet
+    serialized_packet = generic_m1.serialize();
+    int res = m_socket->send(serialized_packet, GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    incrementCounter();
+
     return 0;
+}
+
+bool Client::incrementCounter() {
+
+    // check if renegotiation is needed
+    if (m_counter == MAX_COUNTER_VALUE) {
+        int res = login();
+        if (res != 0)
+            return false;
+    } else {
+        m_counter++;
+    }
+
+    return true;
 }
 
 int Client::run() {
@@ -289,6 +330,12 @@ int Client::run() {
         }
 
         else if (command == "logout") {
+            res = logout();
+            if (res < 0) {
+                cerr << "[-] (Client) Logout failed" << endl;
+                return -1;
+            }
+
             return 0;
         }
         

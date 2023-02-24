@@ -1,6 +1,8 @@
 #ifndef _GENERICPACKET_H
 #define _GENERICPACKET_H
 
+#define MAX_COUNTER_VALUE 0xffffffff
+
 #include <iostream>
 #include <string>
 #include <cstdint>
@@ -21,7 +23,7 @@ struct GenericPacket {
     int ciphertext_size;
     uint8_t hmac[32];
 
-    GenericPacket() {}
+    GenericPacket() { ciphertext = nullptr; }
 
     GenericPacket(unsigned char* session_key, unsigned char* hmac_key, uint8_t* plaintext, int plaintext_size/*, int expected_plaintext_size = -1*/) {
 
@@ -52,10 +54,14 @@ struct GenericPacket {
         delete[] iv;
 
         // concatenate IV and ciphertext
-        uint8_t* buffer = new uint8_t[16 + ciphertext_size];
-        memcpy(buffer, iv, 16);
-        memcpy(buffer + 16, ciphertext, ciphertext_size);
+        uint8_t* buffer = new uint8_t[(16 + ciphertext_size) * sizeof(uint8_t)];
+        memcpy(buffer, this->iv, 16 * sizeof(uint8_t));
+        memcpy(buffer + (16 * sizeof(uint8_t)), ciphertext, ciphertext_size * sizeof(uint8_t));
         
+        cout << "[test] HMAC key in generate = " << hmac_key << endl;
+
+        cout << "[test] Buffer in generate = " << buffer << endl;
+
         // generate the HMAC
         Hmac hmac(hmac_key);
         unsigned char* digest = nullptr;
@@ -69,22 +75,40 @@ struct GenericPacket {
 
     bool verifyHMAC(unsigned char* key) {
 
+        cout << "[test] HMAC key in verify = " << key << endl;
+
         // concatenate IV and ciphertext
-        uint8_t* buffer = new uint8_t[16 + ciphertext_size];
-        memcpy(buffer, iv, 16);
-        memcpy(buffer + 16, ciphertext, ciphertext_size);
+        uint8_t* buffer = new uint8_t[(16 + ciphertext_size) * sizeof(uint8_t)];
+        memcpy(buffer, iv, 16 * sizeof(uint8_t));
+        memcpy(buffer + (16 * sizeof(uint8_t)), ciphertext, ciphertext_size * sizeof(uint8_t));
+
+        cout << "[test] Buffer in verify = " << buffer << endl;
 
         // verify the HMAC
         Hmac hmac(key);
-        bool res = hmac.verify(buffer, 16 + ciphertext_size, this->hmac, 32 * sizeof(uint8_t));
+        bool res = hmac.verify(buffer, (16 + ciphertext_size) * sizeof(uint8_t), this->hmac, 32 * sizeof(uint8_t));
 
         delete[] buffer;
         return res;
     }
 
+    uint8_t decryptCiphertext(unsigned char* key, unsigned char*& plaintext, int& plaintext_size) {
+
+        // decrypt the ciphertext
+        AesCbc decryptor(DECRYPT, key);
+        unsigned char* iv = this->iv;
+        decryptor.run(ciphertext, ciphertext_size, plaintext, plaintext_size, iv);
+
+        // return the packet type
+        uint8_t type;
+        memcpy(&type, plaintext, sizeof(uint8_t));
+        return type;
+    }
+
     uint8_t* serialize() const {
 
-        uint8_t* buffer = new uint8_t[GenericPacket::getSize(ciphertext_size)];
+        int buffer_size = (16 + ciphertext_size + 32) * sizeof(uint8_t);
+        uint8_t* buffer = new uint8_t[buffer_size];
 
         size_t position = 0;
         memcpy(buffer, iv, 16 * sizeof(uint8_t));
@@ -107,6 +131,7 @@ struct GenericPacket {
         memcpy(genericPacket.iv, buffer, 16 * sizeof(uint8_t));
         position += 16 * sizeof(uint8_t);
 
+        genericPacket.ciphertext = new uint8_t[genericPacket.ciphertext_size];
         memcpy(genericPacket.ciphertext, buffer + position, genericPacket.ciphertext_size * sizeof(uint8_t));
         position += genericPacket.ciphertext_size * sizeof(uint8_t);
 
@@ -115,7 +140,12 @@ struct GenericPacket {
         return genericPacket;
     }
 
-    static int getSize(int ciphertext_size) {
+    static int getSize(int plaintext_size) {
+
+        // calculate the ciphertext size
+        int ciphertext_size = plaintext_size + (16 - (plaintext_size % 16));
+
+        // cout << "[test] plaintext size = " << plaintext_size << " | ciphertext size = " << ciphertext_size << endl;
 
         int size = 0;
 

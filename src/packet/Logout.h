@@ -18,6 +18,13 @@ struct LogoutM1 {
     uint8_t command_code;
     uint32_t counter;
 
+    LogoutM1() {}
+
+    LogoutM1(uint32_t counter) {
+        this->command_code = LOGOUT_REQ;
+        this->counter = counter;
+    }
+
     uint8_t* serialize() const {
         
         uint8_t* buffer = new uint8_t[COMMAND_FIELD_PACKET_SIZE];
@@ -31,6 +38,8 @@ struct LogoutM1 {
 
         // add random bytes
         RAND_bytes(buffer + position, COMMAND_FIELD_PACKET_SIZE - position);
+    
+        return buffer;
     }
 
     static LogoutM1 deserialize(uint8_t* buffer) {

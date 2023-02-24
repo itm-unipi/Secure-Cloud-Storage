@@ -20,10 +20,13 @@ class Client {
     EVP_PKEY* m_long_term_key;
     unsigned char m_session_key[32];
     unsigned char m_hmac_key[32];
+    uint32_t m_counter;
     bool m_verbose;
 
     int login();
     int logout();
+
+    bool incrementCounter();
 
 public:
     Client(bool verbose);

@@ -1,7 +1,8 @@
 # To Do List
 
-* Dove viene fatta la decifratura del generic packet? E poi come si fa il parsing del tipo del generic packet?
+* ripartire da HMAC Verify che fallisce nel logout
+* controllare la funzione che incrementa il counter e gestisce l'overflow
 * REQUEST e SUCCESS packet
-* Gestione del counter in Worker e Client
-* Esempio di logout (pacchetto generico che ha size fissa e la parte cifrata avrà bit randomici come "padding")
+* rimuovere commenti nel costruttore di generic packet
+* ripensare list
 * Sistemare lo script di test
