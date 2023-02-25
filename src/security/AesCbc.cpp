@@ -11,14 +11,14 @@ using namespace std;
 AesCbc::AesCbc(uint8_t type, unsigned char* key) {
     
     m_type = type;
-    m_key = new unsigned char[BLOCK_SIZE];
-    memcpy(m_key, key, BLOCK_SIZE);
+    m_key = new unsigned char[AES_KEY_SIZE];
+    memcpy(m_key, key, AES_KEY_SIZE);
 }
 
 AesCbc::~AesCbc() {
     
 #pragma optimize("", off)
-    memset(m_key, 0, BLOCK_SIZE);
+    memset(m_key, 0, AES_KEY_SIZE);
 #pragma optimize("", on)
     delete[] m_key;
 }

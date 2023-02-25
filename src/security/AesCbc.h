@@ -8,7 +8,7 @@
 
 #define ENCRYPT 0
 #define DECRYPT 1
-#define BLOCK_SIZE 256
+#define AES_KEY_SIZE 32
 
 class AesCbc {
 
