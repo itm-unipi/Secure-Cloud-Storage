@@ -35,8 +35,10 @@ public:
     }
 
     static void deleteStore() {
-        if (m_certificate_store_instance)
+        if (m_certificate_store_instance) {
             delete m_certificate_store_instance;
+            m_certificate_store_instance = nullptr;
+        }
     }
     
     // --------------------------------------------------

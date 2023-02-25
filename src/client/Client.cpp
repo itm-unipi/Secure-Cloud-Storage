@@ -266,7 +266,7 @@ int Client::logout() {
     // check if the counter is correct
     if (m2.counter != m_counter) {
         // TODO: use the goto?
-        cerr << "[-] (LogoutRequest) Invalid counter" << endl;
+        cerr << "[-] (Logout) Invalid counter" << endl;
     }
 
     // check if operation failed
@@ -305,15 +305,15 @@ int Client::run() {
     // sanitize username and password
     static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.@?!#*";
     if (strspn(m_username.c_str(), ok_chars) < strlen(m_username.c_str())) { 
-        cerr << "[-] (Client) Not valid username" << endl;
+        cerr << "[-] (Run) Not valid username" << endl;
         return -1;
     }
     if (strspn(password.c_str(), ok_chars) < strlen(password.c_str())) { 
-        cerr << "[-] (Client) Not valid username" << endl;
+        cerr << "[-] (Run) Not valid username" << endl;
         return -1;
     }
     if (m_username.length() >= 30) {
-        cerr << "[-] (Client) Username too long" << endl;
+        cerr << "[-] (Run) Username too long" << endl;
         return -1;
     } 
 
@@ -321,7 +321,7 @@ int Client::run() {
     string private_key_file = "resources/encrypted_keys/" + m_username + "_key.pem";
     BIO *bio = BIO_new_file(private_key_file.c_str(), "r");
     if (!bio) {
-        cerr << "[-] (Client) Failed to open encrypted key PEM file" << endl;
+        cerr << "[-] (Run) Failed to open encrypted key PEM file" << endl;
         return -2;
     }
     
@@ -333,7 +333,7 @@ int Client::run() {
     try {
         m_socket = new CommunicationSocket(SERVER_IP, SERVER_PORT);
     } catch (const std::exception& e) {
-        std::cerr << "[-] (Client) Exception: " << e.what() << std::endl;
+        std::cerr << "[-] (Run) Exception: " << e.what() << std::endl;
         return -3;
     }
 
@@ -341,9 +341,10 @@ int Client::run() {
 
     int res = login();
     if (res != 0) {
-        cerr << "[-] (Login) Failed with error code " << res << endl;
+        cerr << "[-] (Run) Login failed with error code " << res << endl;
         return -1;
     }
+    cout << "[+] (Run) Login completed" << endl;
 
     while (1) {
         
@@ -371,20 +372,20 @@ int Client::run() {
 
         }
 
-        else if (command == "logout") {
+        else if (command == "logout" || command == "exit") {
             res = logout();
             if (res < 0) {
-                cerr << "[-] (Client) Logout failed" << endl;
+                cerr << "[-] (Run) Logout failed with error code " << res << endl;
                 return -1;
-            }
+            } 
 
+            cout << "[+] (Run) Logout completed" << endl;
+
+            if (command == "exit") 
+                return 1;
             return 0;
         }
         
-        else if (command == "exit") {
-            return 1;
-        }
-
         else if (command == "help") {
             cout << "----------- COMMANDS -----------" << endl;
             cout << "list: " << endl;
@@ -398,7 +399,7 @@ int Client::run() {
         }
 
         else {
-            cerr << "[-] (Client) Not valid command" << endl;
+            cerr << "[-] (Run) Not valid command" << endl;
         }
         
     }
