@@ -3,9 +3,10 @@
 #include <openssl/pem.h>
 
 #include "Client.h"
-#include "../packet/GenericPacket.h"
+#include "../packet/Generic.h"
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
+#include "../packet/Result.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
@@ -213,19 +214,20 @@ int Client::logout() {
 
     // create the M1 packet
     LogoutM1 m1(m_counter);
+    // m1.print();
     uint8_t* serialized_packet = m1.serialize();
 
     // create generic packet
-    GenericPacket generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
+    Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", off)
     memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
     delete[] serialized_packet;
-    generic_m1.print();
+    // generic_m1.print();
 
     // 1.) send generic packet
     serialized_packet = generic_m1.serialize();
-    int res = m_socket->send(serialized_packet, GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE));
+    int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
     delete[] serialized_packet;
     if (res < 0) {
         return -1;
@@ -233,7 +235,47 @@ int Client::logout() {
 
     incrementCounter();
 
-    return 0;
+    // 2.) receive the generic packet
+    serialized_packet = new uint8_t[Generic::getSize(Result::getSize())];
+    res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
+    if (res < 0) {
+        // TODO: errore + delete
+        delete[] serialized_packet;
+        return -1;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_m2 = Generic::deserialize(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    // generic_m2.print();
+    bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (Logout) HMAC verification failed" << endl;
+        return -2;
+    }
+
+    LOG("(Logout) Received valid packet");
+
+    // get the m2 packet
+    uint8_t* plaintext = nullptr;
+    int plaintext_size = 0;
+    generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    Result m2 = Result::deserialize(plaintext);
+    // m2.print();
+
+    // check if the counter is correct
+    if (m2.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (LogoutRequest) Invalid counter" << endl;
+    }
+
+    // check if operation failed
+    if (m2.command_code == REQ_SUCCESS)
+        return 0;
+    else if (m2.command_code == REQ_FAILED)
+        return -1;
+
+    return -2;
 }
 
 bool Client::incrementCounter() {

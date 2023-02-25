@@ -11,12 +11,13 @@ class Worker {
     CommunicationSocket* m_socket;
     unsigned char m_session_key[32];
     unsigned char m_hmac_key[32];
+    uint32_t m_counter;
 
     // protocols
     int loginRequest();
     int logoutRequest(uint8_t* plaintext);
 
-    bool incrementCounter(uint32_t& counter);
+    bool incrementCounter();
 
 public:
     Worker(CommunicationSocket* socket, bool verbose);

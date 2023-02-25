@@ -2,9 +2,10 @@
 #include <openssl/evp.h>
 
 #include "Worker.h"
-#include "../packet/GenericPacket.h"
+#include "../packet/Generic.h"
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
+#include "../packet/Result.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
@@ -218,34 +219,75 @@ int Worker::loginRequest() {
     delete[] ephemeral_keys_buffer;
     delete[] decrypted_signature;
     if (!signature_verification) {
-        cerr << "[-] Invalid signature" << endl;
+        cerr << "[-] (LoginRequest) Invalid signature" << endl;
         return -10;
     }
 
     LOG("(LoginRequest) Verified client signature");
 
+    // reset the counter
+    m_counter = 0;
     return 0;
 }
 
 int Worker::logoutRequest(uint8_t* plaintext) {
 
     // deserialize the packet
-    LogoutM1 logoutM1 = LogoutM1::deserialize(plaintext);
-    logoutM1.print();
+    LogoutM1 m1 = LogoutM1::deserialize(plaintext);
+    // m1.print();
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (LogoutRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    // create the result packet
+    Result m2(m_counter, true);
+    // m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, Result::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    LOG("(LogoutRequest) Sent result packet");
+
+    // delete session key and hmac key
+    #pragma optimize("", off)
+    memset(m_session_key, 0, sizeof(m_session_key));
+    memset(m_hmac_key, 0, sizeof(m_hmac_key));
+    #pragma optimize("", on)
+
+    LOG("(LogoutRequest) Deleted session key and HMAC key");
 
     return 0;
 }
 
-bool Worker::incrementCounter(uint32_t& counter) {
+bool Worker::incrementCounter() {
 
     // check if renegotiation is needed
-    if (counter == MAX_COUNTER_VALUE) {
+    if (m_counter == MAX_COUNTER_VALUE) {
         int res = loginRequest();
         if (res != 0)
             return false;
-        counter = 0;
+        m_counter = 0;
     } else {
-        counter++;
+        m_counter++;
     }
 
     return true;
@@ -262,8 +304,8 @@ int Worker::run() {
     while (1) {
 
         // 1.) receive the generic packet
-        uint8_t* serialized_packet = new uint8_t[GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE)];
-        int res = m_socket->receive(serialized_packet, GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE));
+        uint8_t* serialized_packet = new uint8_t[Generic::getSize(COMMAND_FIELD_PACKET_SIZE)];
+        int res = m_socket->receive(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
         if (res < 0) {
             // TODO: errore + delete
             delete[] serialized_packet;
@@ -271,7 +313,7 @@ int Worker::run() {
         }
 
         // deserialize the generic packet and verify the fingerprint
-        GenericPacket generic_m1 = GenericPacket::deserialize(serialized_packet, GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE));
+        Generic generic_m1 = Generic::deserialize(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
         delete[] serialized_packet;
         // generic_m1.print();
         bool verification_res = generic_m1.verifyHMAC(m_hmac_key);

@@ -16,35 +16,16 @@ using namespace std;
 
 // ---------------------------------- GENERIC PACKET ----------------------------------
 
-struct GenericPacket {
+struct Generic {
 
     uint8_t iv[16];
     uint8_t* ciphertext;
     int ciphertext_size;
     uint8_t hmac[32];
 
-    GenericPacket() { ciphertext = nullptr; }
+    Generic() { ciphertext = nullptr; }
 
-    GenericPacket(unsigned char* session_key, unsigned char* hmac_key, uint8_t* plaintext, int plaintext_size/*, int expected_plaintext_size = -1*/) {
-
-        /*/ check if is needed to generate random bytes in the plaintext
-        if (expected_plaintext_size != -1 && expected_plaintext_size > plaintext_size) {
-            // create a new plaintext buffer with the wanted size
-            uint8_t* old_plaintext = plaintext;
-            plaintext = new uint8_t[expected_plaintext_size];
-
-            // concatenate old plaintext with the random bytes
-            memcpy(plaintext, old_plaintext, plaintext_size);
-            RAND_bytes(plaintext + plaintext_size, expected_plaintext_size - plaintext_size);
-
-            // remove from memory the old plaintext
-            #pragma optimize("", off)
-            memset(old_plaintext, 0, plaintext_size);
-            #pragma optimize("", on)
-            delete[] old_plaintext;
-
-            plaintext_size = expected_plaintext_size;
-        }*/
+    Generic(unsigned char* session_key, unsigned char* hmac_key, uint8_t* plaintext, int plaintext_size) {
 
         // generate the ciphertext
         AesCbc encryptor(ENCRYPT, session_key);
@@ -114,9 +95,9 @@ struct GenericPacket {
         return buffer;
     }
 
-    static GenericPacket deserialize(uint8_t* buffer, int buffer_size) {
+    static Generic deserialize(uint8_t* buffer, int buffer_size) {
 
-        GenericPacket genericPacket;
+        Generic genericPacket;
         genericPacket.ciphertext_size = buffer_size - ((16 + 32) * sizeof(uint8_t));
 
         size_t position = 0;
@@ -136,8 +117,6 @@ struct GenericPacket {
 
         // calculate the ciphertext size
         int ciphertext_size = plaintext_size + (16 - (plaintext_size % 16));
-
-        // cout << "[test] plaintext size = " << plaintext_size << " | ciphertext size = " << ciphertext_size << endl;
 
         int size = 0;
 

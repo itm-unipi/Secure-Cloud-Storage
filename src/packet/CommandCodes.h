@@ -23,11 +23,17 @@ string printCommandCodeDescription(uint8_t code) {
 
     switch (code)
     {
-    case 10:
-        return "LOGOUT_REQ";
+        case 0:
+            return "REQ_FAILED";
+
+        case 1:
+            return "REQ_SUCCESS";
+
+        case 10:
+            return "LOGOUT_REQ";
     
-    default:
-        return "UNKNOWN";
+        default:
+            return "UNKNOWN";
     }
 }
 
