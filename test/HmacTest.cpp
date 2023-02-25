@@ -4,7 +4,7 @@ using namespace std;
 
 int main() {
 
-    unsigned char msg[] = "Lorem ipsum dolor sit amet.";
+    unsigned char msg[] = "Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet. ";
     unsigned char *key = (unsigned char *)"abcdefghijklmnopabcdefghijklmnop";
     Hmac hmac(key);
 

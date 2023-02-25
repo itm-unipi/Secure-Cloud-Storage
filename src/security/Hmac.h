@@ -1,7 +1,7 @@
 #ifndef _HMAC_H
 #define _HMAC_H
 
-#define BLOCK_SIZE 256
+#define HMAC_DIGEST_SIZE 32
 
 class Hmac {
 

@@ -5,14 +5,14 @@
 
 Hmac::Hmac(unsigned char* key) {
 
-    m_key = new unsigned char[BLOCK_SIZE];
-    memcpy(m_key, key, BLOCK_SIZE);
+    m_key = new unsigned char[HMAC_DIGEST_SIZE];
+    memcpy(m_key, key, HMAC_DIGEST_SIZE);
 }
 
 Hmac::~Hmac() {
 
 #pragma optimize("", off)
-    memset(m_key, 0, BLOCK_SIZE);
+    memset(m_key, 0, HMAC_DIGEST_SIZE);
 #pragma optimize("", on)
     delete[] m_key;
 }
@@ -25,7 +25,7 @@ void Hmac::generate(unsigned char* input_buffer,
     digest = new unsigned char[EVP_MD_size(EVP_sha256())];
     HMAC_CTX* ctx = HMAC_CTX_new();
 
-    HMAC_Init_ex(ctx, m_key, BLOCK_SIZE, EVP_sha256(), nullptr);
+    HMAC_Init_ex(ctx, m_key, HMAC_DIGEST_SIZE, EVP_sha256(), nullptr);
     HMAC_Update(ctx, input_buffer, input_buffer_size);
     HMAC_Final(ctx, digest, &digest_size);    
 
