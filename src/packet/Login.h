@@ -11,13 +11,6 @@
 
 using namespace std;
 
-/*
-    cout << "HMAC KEY: ";
-    for (int i = 0; i < 32; ++i)
-        cout << m_hmac_key[i];
-    cout << endl;
-*/
-
 // --------------------------------------- M1 ---------------------------------------
 
 struct LoginM1 {
@@ -90,8 +83,8 @@ struct LoginM1 {
         cout << "---------- LOGIN M1 ----------" << endl;
         cout << "EPHEMERAL KEY:" << endl;
         for (int i = 0; i < 1024; ++i)
-            cout << ephemeral_key[i];
-        cout << endl;
+            cout << hex << ephemeral_key[i];
+        cout << dec << endl;
         cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
         cout << "USERNAME: " << username << endl;
         cout << "------------------------------" << endl;
@@ -248,21 +241,21 @@ struct LoginM3 {
         cout << "---------- LOGIN M3 ----------" << endl;
         cout << "EPHEMERAL KEY:" << endl;
         for (int i = 0; i < 1024; ++i)
-            cout << ephemeral_key[i];
-        cout << endl;
+            cout << hex << ephemeral_key[i];
+        cout << dec << endl;
         cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
         cout << "IV:" << endl;
         for (int i = 0; i < 16; ++i)
-            cout << iv[i];
-        cout << endl;
+            cout << hex << iv[i];
+        cout << dec << endl;
         cout << "ENCRYPTED SIGNATURE:" << endl;
         for (int i = 0; i < 144; ++i)
-            cout << encrypted_signature[i];
-        cout << endl;
+            cout << hex << encrypted_signature[i];
+        cout << dec << endl;
         cout << "SERIALIZED CERTIFICATE:" << endl;
         for (int i = 0; i < (int)serialized_certificate_size; ++i)
-            cout << serialized_certificate[i];
-        cout << endl;
+            cout << hex << serialized_certificate[i];
+        cout << dec << endl;
         cout << "SERIALIZED CERTIFICATE SIZE: " << serialized_certificate_size << endl;
         cout << "------------------------------" << endl;
     }
@@ -325,12 +318,12 @@ struct LoginM4 {
         cout << "---------- LOGIN M4 ----------" << endl;
         cout << "IV:" << endl;
         for (int i = 0; i < 16; ++i)
-            cout << iv[i];
-        cout << endl;
+            cout << hex << iv[i];
+        cout << dec << endl;
         cout << "ENCRYPTED SIGNATURE:" << endl;
         for (int i = 0; i < 144; ++i)
-            cout << encrypted_signature[i];
-        cout << endl;
+            cout << hex << encrypted_signature[i];
+        cout << dec << endl;
         cout << "------------------------------" << endl;
     }
 };

@@ -227,7 +227,12 @@ int Worker::loginRequest() {
     return 0;
 }
 
-int Worker::logoutRequest() {
+int Worker::logoutRequest(uint8_t* plaintext) {
+
+    // deserialize the packet
+    LogoutM1 logoutM1 = LogoutM1::deserialize(plaintext);
+    logoutM1.print();
+
     return 0;
 }
 
@@ -268,19 +273,33 @@ int Worker::run() {
         // deserialize the generic packet and verify the fingerprint
         GenericPacket generic_m1 = GenericPacket::deserialize(serialized_packet, GenericPacket::getSize(COMMAND_FIELD_PACKET_SIZE));
         delete[] serialized_packet;
-        generic_m1.print();
+        // generic_m1.print();
         bool verification_res = generic_m1.verifyHMAC(m_hmac_key);
         if (!verification_res) {
             cerr << "[-] (Run) HMAC verification failed" << endl;
             return -2;
         }
 
+        LOG("(Run) Received valid packet");
+
         // parse the command
         uint8_t* plaintext = nullptr;
         int plaintext_size = 0;
         uint8_t command_code = generic_m1.decryptCiphertext(m_session_key, plaintext, plaintext_size);
 
-        cout << "Received command: " << printCommandCodeDescription(command_code) << endl; 
+        LOG("(Run) Command received: " << printCommandCodeDescription(command_code));
+
+        switch (command_code)
+        {
+        case LOGOUT_REQ:
+            logoutRequest(plaintext);
+            break;
+        
+        default:
+            cerr << "[-] (Run) Invalid command received" << endl;
+            break;
+        }
+
         return 0;
     }
 

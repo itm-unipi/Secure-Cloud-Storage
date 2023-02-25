@@ -57,16 +57,12 @@ struct GenericPacket {
         uint8_t* buffer = new uint8_t[(16 + ciphertext_size) * sizeof(uint8_t)];
         memcpy(buffer, this->iv, 16 * sizeof(uint8_t));
         memcpy(buffer + (16 * sizeof(uint8_t)), ciphertext, ciphertext_size * sizeof(uint8_t));
-        
-        cout << "[test] HMAC key in generate = " << hmac_key << endl;
-
-        cout << "[test] Buffer in generate = " << buffer << endl;
 
         // generate the HMAC
         Hmac hmac(hmac_key);
         unsigned char* digest = nullptr;
         unsigned int digest_size = 0;
-        hmac.generate(buffer, 16 + ciphertext_size, digest, digest_size);
+        hmac.generate(buffer, (16 + ciphertext_size) * sizeof(uint8_t), digest, digest_size);
         memcpy(this->hmac, digest, digest_size * sizeof(uint8_t));
 
         delete[] digest;
@@ -75,14 +71,10 @@ struct GenericPacket {
 
     bool verifyHMAC(unsigned char* key) {
 
-        cout << "[test] HMAC key in verify = " << key << endl;
-
         // concatenate IV and ciphertext
         uint8_t* buffer = new uint8_t[(16 + ciphertext_size) * sizeof(uint8_t)];
         memcpy(buffer, iv, 16 * sizeof(uint8_t));
         memcpy(buffer + (16 * sizeof(uint8_t)), ciphertext, ciphertext_size * sizeof(uint8_t));
-
-        cout << "[test] Buffer in verify = " << buffer << endl;
 
         // verify the HMAC
         Hmac hmac(key);
@@ -161,16 +153,16 @@ struct GenericPacket {
         cout << "------- GENERIC PACKET -------" << endl;
         cout << "IV: ";
         for (int i = 0; i < 16; ++i)
-            cout << iv[i];
-        cout << endl;
+            cout << hex << (int)iv[i];
+        cout << dec << endl;
         cout << "CIPHERTEXT (first 10 bytes): ";
         for (int i = 0; i < 10; ++i)
-            cout << ciphertext[i];
-        cout << endl;  
+            cout << hex << (int)ciphertext[i];
+        cout << dec << endl;  
         cout << "HMAC: ";
-        for (int i = 0; i < 16; ++i)
-            cout << hmac[i];
-        cout << endl;        
+        for (int i = 0; i < 32; ++i)
+            cout << hex << (int)hmac[i];
+        cout << dec << endl;        
         cout << "------------------------------" << endl;
     }
 };

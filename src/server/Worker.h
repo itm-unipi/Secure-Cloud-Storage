@@ -14,7 +14,7 @@ class Worker {
 
     // protocols
     int loginRequest();
-    int logoutRequest();
+    int logoutRequest(uint8_t* plaintext);
 
     bool incrementCounter(uint32_t& counter);
 
