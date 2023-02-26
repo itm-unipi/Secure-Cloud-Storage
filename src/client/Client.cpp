@@ -262,6 +262,10 @@ int Client::logout() {
     generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     Result m2 = Result::deserialize(plaintext);
     // m2.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
 
     // check if the counter is correct
     if (m2.counter != m_counter) {

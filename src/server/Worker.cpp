@@ -235,6 +235,10 @@ int Worker::logoutRequest(uint8_t* plaintext) {
     // deserialize the packet
     LogoutM1 m1 = LogoutM1::deserialize(plaintext);
     // m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
 
     // check if the counter is correct
     if (m1.counter != m_counter) {
@@ -333,13 +337,13 @@ int Worker::run() {
 
         switch (command_code)
         {
-        case LOGOUT_REQ:
-            logoutRequest(plaintext);
-            break;
-        
-        default:
-            cerr << "[-] (Run) Invalid command received" << endl;
-            break;
+            case LOGOUT_REQ:
+                logoutRequest(plaintext);
+                break;
+            
+            default:
+                cerr << "[-] (Run) Invalid command received" << endl;
+                break;
         }
 
         return 0;

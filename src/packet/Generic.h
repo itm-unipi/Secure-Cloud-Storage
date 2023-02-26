@@ -50,6 +50,8 @@ struct Generic {
         delete[] buffer;
     }
 
+    ~Generic() { delete[] ciphertext; }
+
     bool verifyHMAC(unsigned char* key) {
 
         // concatenate IV and ciphertext
