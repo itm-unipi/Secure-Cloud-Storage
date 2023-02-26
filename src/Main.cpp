@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
     }
 
 #else
-    cerr << "Entità non riconosciuta" << endl;
+    cerr << "Entity not recognized" << endl;
 #endif
 
     return 0;

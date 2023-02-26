@@ -11,11 +11,14 @@ using namespace std;
 #define FILE_CHUNK      3
 #define TRANSFER_ACK    4
 #define DOWNLOAD_REQ    5
-#define DELETE_REQ      6
-#define LIST_REQ        7
-#define LIST            8
-#define RENAME_REQ      9
-#define LOGOUT_REQ      10
+#define FILE_FOUND      6
+#define FILE_NOT_FOUND  7
+#define DELETE_REQ      8
+#define FILE_LIST_REQ   9
+#define FILE_LIST_SIZE  10
+#define FILE_LIST       11
+#define RENAME_REQ      12
+#define LOGOUT_REQ      13
 
 #define COMMAND_FIELD_PACKET_SIZE 65 * sizeof(uint8_t)          // the longest command packet is the Rename Command (65 byte)
 
