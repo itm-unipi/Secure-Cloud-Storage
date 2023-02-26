@@ -282,6 +282,15 @@ int Client::logout() {
     return -2;
 }
 
+// ----------- BIAGIO -------------
+// --------------------------------
+
+// ----------- MATTEO -------------
+// --------------------------------
+
+// ---------- GIANLUCA ------------
+// --------------------------------
+
 bool Client::incrementCounter() {
 
     // check if renegotiation is needed

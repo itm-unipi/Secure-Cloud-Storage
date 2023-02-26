@@ -282,6 +282,16 @@ int Worker::logoutRequest(uint8_t* plaintext) {
     return 0;
 }
 
+// ----------- BIAGIO -------------
+// --------------------------------
+
+// ----------- MATTEO -------------
+// --------------------------------
+
+// ---------- GIANLUCA ------------
+// --------------------------------
+
+
 bool Worker::incrementCounter() {
 
     // check if renegotiation is needed

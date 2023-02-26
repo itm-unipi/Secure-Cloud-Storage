@@ -17,6 +17,15 @@ class Worker {
     int loginRequest();
     int logoutRequest(uint8_t* plaintext);
 
+    // ----------- BIAGIO -------------
+    // --------------------------------
+
+    // ----------- MATTEO -------------
+    // --------------------------------
+
+    // ---------- GIANLUCA ------------
+    // --------------------------------
+
     bool incrementCounter();
 
 public:
