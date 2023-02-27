@@ -10,6 +10,8 @@
 #include "../utility/FileManager.h"
 #include "./CommandCodes.h"
 
+#define FILE_NAME_SIZE 30
+
 using namespace std;
 
 // ----------------------------------- UPLOAD M1 ------------------------------------
@@ -18,20 +20,77 @@ struct UploadM1 {
 
     uint8_t command_code;
     uint32_t counter;
-    char file_name[30];
+    char file_name[FILE_NAME_SIZE];
     uint32_t file_size;         // 0 represents 4GB
 
     UploadM1() {}
 
-    UploadM1(uint32_t counter, string file_name, uint32_t file_size) {}
+    UploadM1(uint32_t counter, string file_name, uint32_t file_size) {
 
-    uint8_t* serialize() const { return nullptr; }
+        this->command_code = UPLOAD_REQ;
+        this->counter = counter;
+        strncpy(this->file_name, file_name.c_str(), FILE_NAME_SIZE);
+        this->file_size = file_size;
+    }
 
-    static UploadM1 deserialize(uint8_t* buffer) { return UploadM1(); }
+    uint8_t* serialize() const { 
 
-    static int getSize() { return 0; }
+        uint8_t* buffer = new uint8_t[COMMAND_FIELD_PACKET_SIZE];
+        
+        size_t position = 0;
+        memcpy(buffer, &command_code, sizeof(uint8_t));
+        position += sizeof(uint8_t);
 
-    void print() const {}
+        memcpy(buffer + position, &counter, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
+        memcpy(buffer + position, file_name, FILE_NAME_SIZE * sizeof(char));
+        position += FILE_NAME_SIZE * sizeof(char);
+
+        memcpy(buffer + position, &file_size, sizeof(uint32_t));
+
+        return buffer;
+    }
+
+    static UploadM1 deserialize(uint8_t* buffer) { 
+
+        UploadM1 uploadM1;
+
+        size_t position = 0;
+        memcpy(&uploadM1.command_code, buffer, sizeof(uint8_t));
+        position += sizeof(uint8_t);
+
+        memcpy(&uploadM1.counter, buffer + position, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
+        memcpy(uploadM1.file_name, buffer + position, FILE_NAME_SIZE * sizeof(char));
+        position += FILE_NAME_SIZE * sizeof(char);
+
+        memcpy(&uploadM1.file_size, buffer + position, sizeof(uint32_t));
+
+        return uploadM1;
+    }
+
+    static int getSize() { 
+
+        int size = 0;
+
+        size += sizeof(uint8_t);
+        size += sizeof(uint32_t);
+        size += FILE_NAME_SIZE * sizeof(char);
+        size += sizeof(uint32_t);
+
+        return size;
+    }
+
+    void print() const {
+
+        cout << "---------- UPLOAD M1 ---------" << endl;
+        cout << "COUNTER: " << counter << endl;
+        cout << "FILE NAME: " << file_name << endl;
+        cout << "FILE SIZE: " << file_size << endl;
+        cout << "------------------------------" << endl;
+    }
 };
 
 // ---------------------------------- UPLOAD M3+i -----------------------------------
@@ -40,19 +99,74 @@ struct UploadMi {
 
     uint8_t command_code;
     uint32_t counter;
-    uint8_t chunk[CHUNK_SIZE];
+    uint8_t* chunk;
+    int chunk_size;                 // used during serialize, not sent
 
     UploadMi() {}
 
-    UploadMi(uint32_t counter, uint8_t* chunk, int chunk_size) {}   // se la chunk_size è < della macro CHUNK_SIZE -> aggiungere byte randomici
+    UploadMi(uint32_t counter, uint8_t* chunk, int chunk_size) {
 
-    uint8_t* serialize() const { return nullptr; }
+        this->command_code = FILE_CHUNK;
+        this->counter = counter;
+        this->chunk = new uint8_t[chunk_size];
+        this->chunk_size = chunk_size;
+    } 
 
-    static UploadMi deserialize(uint8_t* buffer) { return UploadMi(); }
+    uint8_t* serialize() const { 
 
-    static int getSize() { return 0; }
+        uint8_t* buffer = new uint8_t[UploadMi::getSize(chunk_size)];
+        
+        size_t position = 0;
+        memcpy(buffer, &command_code, sizeof(uint8_t));
+        position += sizeof(uint8_t);
 
-    void print() const {}
+        memcpy(buffer + position, &counter, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
+        memcpy(buffer + position, chunk, chunk_size * sizeof(uint8_t));
+
+        return buffer;
+    }
+
+    static UploadMi deserialize(uint8_t* buffer, int chunk_size) { 
+        
+        UploadMi uploadMi;
+
+        size_t position = 0;
+        memcpy(&uploadMi.command_code, buffer, sizeof(uint8_t));
+        position += sizeof(uint8_t);
+
+        memcpy(&uploadMi.counter, buffer + position, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
+        memcpy(uploadMi.chunk, buffer + position, chunk_size * sizeof(uint8_t));
+        uploadMi.chunk_size = chunk_size;
+
+        return uploadMi;
+    }
+
+    static int getSize(int chunk_size) { 
+
+        int size = 0;
+
+        size += sizeof(uint8_t);
+        size += sizeof(uint32_t);
+        size += chunk_size * sizeof(uint8_t);
+
+        return size;    
+    }
+
+    void print() const {
+
+        cout << "--------- UPLOAD M3+i --------" << endl;
+        cout << "COUNTER: " << counter << endl;
+        cout << "CHUNK (first 10byte): " << endl;
+        int byte_to_print = chunk_size < 10 ? chunk_size : 10;
+        for (int i = 0; i < chunk_size; ++i)
+            cout << hex << chunk[i];
+        cout << dec << endl;
+        cout << "------------------------------" << endl;
+    }
 };
 
 // ----------------------------------- UPLOAD Mn ------------------------------------
@@ -65,15 +179,63 @@ struct UploadMn {
 
     UploadMn() {}
 
-    UploadMn(uint32_t counter, uint8_t status) {}
+    UploadMn(uint32_t counter, uint8_t status) {
 
-    uint8_t* serialize() const { return nullptr; }
+        this->command_code = TRANSFER_ACK;
+        this->counter = counter;
+        this->status = status;
+    }
 
-    static UploadMn deserialize(uint8_t* buffer) { return UploadMn(); }
+    uint8_t* serialize() const { 
+        
+        uint8_t* buffer = new uint8_t[UploadMn::getSize()];
+        
+        size_t position = 0;
+        memcpy(buffer, &command_code, sizeof(uint8_t));
+        position += sizeof(uint8_t);
 
-    static int getSize() { return 0; }
+        memcpy(buffer + position, &counter, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+        
+        memcpy(buffer + position, &status, sizeof(uint8_t));
 
-    void print() const {}
+        return buffer;
+    }
+
+    static UploadMn deserialize(uint8_t* buffer) { 
+        
+        UploadMn uploadMn;
+
+        size_t position = 0;
+        memcpy(&uploadMn.command_code, buffer, sizeof(uint8_t));
+        position += sizeof(uint8_t);
+
+        memcpy(&uploadMn.counter, buffer + position, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
+        memcpy(&uploadMn.status, buffer + position, sizeof(uint8_t));
+
+        return uploadMn;
+    }
+
+    static int getSize() { 
+        
+        int size = 0;
+
+        size += sizeof(uint8_t);
+        size += sizeof(uint32_t);
+        size += sizeof(uint8_t);
+
+        return size;
+    }
+
+    void print() const {
+
+        cout << "---------- UPLOAD Mn ---------" << endl;
+        cout << "COUNTER: " << counter << endl;
+        cout << "STATUS: " << status << endl;
+        cout << "------------------------------" << endl;
+    }
 };
 
 // ----------------------------------------------------------------------------------
