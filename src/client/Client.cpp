@@ -357,6 +357,7 @@ int Client::run() {
         cerr << "[-] (Run) Login failed with error code " << res << endl;
         return -1;
     }
+    m_username = username;
     cout << "[+] (Run) Login completed" << endl;
 
     while (1) {

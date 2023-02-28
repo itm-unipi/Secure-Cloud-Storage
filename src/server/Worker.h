@@ -7,6 +7,7 @@
 
 class Worker {
 
+    string m_username;
     bool m_verbose;
     CommunicationSocket* m_socket;
     unsigned char m_session_key[32];

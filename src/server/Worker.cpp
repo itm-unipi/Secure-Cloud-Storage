@@ -48,10 +48,12 @@ int Worker::loginRequest() {
     string filename = "resources/public_keys/" + (string)m1.username + "_key.pem";
     BIO *bp = BIO_new_file(filename.c_str(), "r");
     EVP_PKEY* user_public_key = nullptr;
-    if (!bp)
+    if (!bp) {
         m2.result = 0;
-    else
+    } else {
         user_public_key = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL);
+        m_username = (string)m1.username;
+    }
     BIO_free(bp);
 
     // 2.) send the result of existence of the user
@@ -355,8 +357,6 @@ int Worker::run() {
                 cerr << "[-] (Run) Invalid command received" << endl;
                 break;
         }
-
-        return 0;
     }
 
     return 0;
