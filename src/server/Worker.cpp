@@ -440,7 +440,7 @@ int Worker::run() {
         {
             case LOGOUT_REQ:
                 logoutRequest(plaintext);
-                break;            
+                return 0;            
                 
             // ----------- BIAGIO -------------
             case DOWNLOAD_REQ:
