@@ -353,7 +353,7 @@ int Client::list(){
     }
     m2.print();
     #pragma optimize("", off)
-    memset(plaintext, 0, Result::getSize());
+    memset(plaintext, 0, ListM2::getSize());
     #pragma optimize("", on)
     delete[] plaintext;
 
@@ -402,7 +402,7 @@ int Client::list(){
     }
     m3.print();
     #pragma optimize("", off)
-    memset(plaintext, 0, Result::getSize());
+    memset(plaintext, 0, ListM3::getSize(m2.file_list_size));
     #pragma optimize("", on)
     delete[] plaintext;
 
