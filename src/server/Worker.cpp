@@ -6,10 +6,12 @@
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
 #include "../packet/Result.h"
+#include "../packet/Download.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
 #include "../security/AesCbc.h"
+#include "../utility/FileManager.h"
 
 Worker::Worker(CommunicationSocket* socket, bool verbose) {
     m_socket = socket;
@@ -48,10 +50,12 @@ int Worker::loginRequest() {
     string filename = "resources/public_keys/" + (string)m1.username + "_key.pem";
     BIO *bp = BIO_new_file(filename.c_str(), "r");
     EVP_PKEY* user_public_key = nullptr;
-    if (!bp)
+    if (!bp) {
         m2.result = 0;
-    else
+    } else {
+        m_username = (string)m1.username;
         user_public_key = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL);
+    }
     BIO_free(bp);
 
     // 2.) send the result of existence of the user
@@ -283,6 +287,83 @@ int Worker::logoutRequest(uint8_t* plaintext) {
 }
 
 // ----------- BIAGIO -------------
+int Worker::downloadRequest(uint8_t* plaintext) {
+
+    // deserialize the command packet
+    DownloadM1 m1 = DownloadM1::deserialize(plaintext);
+    m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the requested file exists in the user storage
+    string file_path = "data/" + m_username + "/" + string(m1.file_name);
+    LOG("(DownloadRequest) Searching for " + file_path);
+    FileManager requested_file(file_path, READ);
+
+    bool file_found = true; // TEST
+    DownloadM2 m2(m_counter, file_found, requested_file.getFileSize());
+    uint8_t* serialized_packet = m2.serialize();
+
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, DownloadM2::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, DownloadM2::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+
+    // 1) send the result generic packet
+    serialized_packet = generic_m2.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(DownloadM2::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    LOG("(DownloadRequest) Sent result packet");
+
+    if (!file_found) {
+        return -1;
+    }
+
+    cout << "----------------------------------" << endl;
+    cout << "FILE SIZE: " << requested_file.getFileSize() << " bytes" << endl;
+    cout << "NUM OF CHUNKS: " << requested_file.getNumOfChunks() << endl;
+    cout << "LAST CHUNK SIZE: " << requested_file.getLastChunkSize() << " bytes" << endl;
+    cout << "----------------------------------" << endl;
+
+    // 2) send the file chunks
+    uint8_t* buffer = new uint8_t[requested_file.getChunkSize()];
+    size_t chunk_size = requested_file.getChunkSize();
+    for (size_t i = 0; i < requested_file.getNumOfChunks(); i++) {
+
+        if (i == requested_file.getNumOfChunks() - 1)
+            chunk_size = requested_file.getLastChunkSize();
+
+        requested_file.readChunk(buffer, chunk_size * sizeof(uint8_t));
+        DownloadMi mi(m_counter, buffer, chunk_size);
+        mi.print(chunk_size);
+        serialized_packet = mi.serialize(chunk_size);
+
+        Generic generic_mi(m_session_key, m_hmac_key, serialized_packet, DownloadMi::getSize(chunk_size));
+        #pragma optimize("", off)
+        memset(serialized_packet, 0, DownloadMi::getSize(chunk_size));
+        #pragma optimize("", on)
+        delete[] serialized_packet;
+        
+        serialized_packet = generic_mi.serialize();
+        int res = m_socket->send(serialized_packet, Generic::getSize(DownloadMi::getSize(chunk_size)));
+        delete[] serialized_packet;
+        if (res < 0) {
+            return -1;
+        }
+    }
+
+    LOG("(DownloadRequest) File transfer completed");
+    delete[] buffer;
+
+    return 0;
+}
 // --------------------------------
 
 // ----------- MATTEO -------------
@@ -349,14 +430,18 @@ int Worker::run() {
         {
             case LOGOUT_REQ:
                 logoutRequest(plaintext);
+                break;            
+                
+            // ----------- BIAGIO -------------
+            case DOWNLOAD_REQ:
+                downloadRequest(plaintext);
                 break;
+            // --------------------------------
             
             default:
                 cerr << "[-] (Run) Invalid command received" << endl;
                 break;
         }
-
-        return 0;
     }
 
     return 0;

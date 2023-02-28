@@ -27,6 +27,7 @@ class Client {
     int logout();
 
     // ----------- BIAGIO -------------
+    int download(string file_name);
     // --------------------------------
 
     // ----------- MATTEO -------------

@@ -6,7 +6,7 @@ using namespace std;
 
 #define READ 0
 #define WRITE 1
-#define CHUNK_SIZE 64 * 1024
+#define CHUNK_SIZE 10 // 64 * 1024
 
 class FileManager {
 
@@ -29,6 +29,8 @@ public:
     size_t getFileSize() { return m_file_size; }
     size_t getLastChunkSize() { return m_last_chunk_size; }
     size_t getNumOfChunks() { return m_num_of_chunks; }
+    
+    void calculateFileInfo(size_t size);
 };
 
 #endif  // _FILEMANAGER_H

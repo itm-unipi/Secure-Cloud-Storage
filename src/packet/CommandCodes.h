@@ -31,7 +31,16 @@ string printCommandCodeDescription(uint8_t code) {
 
         case 1:
             return "REQ_SUCCESS";
-
+        // ----------- BIAGIO -------------
+        case 3:
+            return "FILE_CHUNK";
+        case 5:
+            return "DOWNLOAD_REQ";
+        case 6:
+            return "FILE_FOUND";
+        case 7:
+            return "FILE_NOT_FOUND";
+        // --------------------------------
         case 10:
             return "LOGOUT_REQ";
     

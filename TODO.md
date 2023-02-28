@@ -6,3 +6,5 @@
 * il filename non può avere il carattere '|', perché è usato come divisore
 * cancellare print commentate
 * Sistemare lo script di test
+* Racchiudere #pragma in una utility function
+* Mandare eccezione nel costruttore del FileManager

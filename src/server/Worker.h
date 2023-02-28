@@ -12,12 +12,14 @@ class Worker {
     unsigned char m_session_key[32];
     unsigned char m_hmac_key[32];
     uint32_t m_counter;
+    string m_username;
 
     // protocols
     int loginRequest();
     int logoutRequest(uint8_t* plaintext);
 
     // ----------- BIAGIO -------------
+    int downloadRequest(uint8_t* plaintext);
     // --------------------------------
 
     // ----------- MATTEO -------------

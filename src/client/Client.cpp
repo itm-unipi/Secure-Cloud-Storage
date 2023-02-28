@@ -7,10 +7,12 @@
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
 #include "../packet/Result.h"
+#include "../packet/Download.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
 #include "../security/AesCbc.h"
+#include "../utility/FileManager.h"
 
 using namespace std;
 
@@ -283,6 +285,114 @@ int Client::logout() {
 }
 
 // ----------- BIAGIO -------------
+int Client::download(string file_name) {
+
+    // 1) send command packet along with the file_name to download
+    DownloadM1 m1(m_counter, file_name);
+    m1.print();
+    uint8_t* serialized_packet = m1.serialize();
+
+    Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+
+    serialized_packet = generic_m1.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    // 2) receive the download M2 packet
+    int generic_m2_size = Generic::getSize(DownloadM2::getSize());
+    serialized_packet = new uint8_t[generic_m2_size];
+    res = m_socket->receive(serialized_packet, generic_m2_size);
+    if (res < 0) {
+        return -2;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_m2 = Generic::deserialize(serialized_packet, generic_m2_size);
+    delete[] serialized_packet;
+    bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (Download) HMAC verification failed" << endl;
+        return -3;
+    }
+
+    LOG("(Download) Received valid packet");
+    
+    // get the packet content
+    uint8_t* plaintext = nullptr;
+    int plaintext_size = 0;
+    generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    DownloadM2 m2 = DownloadM2::deserialize(plaintext);
+    m2.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, DownloadM2::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the requested file has been found on the cloud
+    if (m2.command_code == FILE_NOT_FOUND) {
+        LOG("(Dowload) File not found")
+        return -4;
+    } else {
+        LOG("(Download) File found")
+    }
+
+    // initialize the file manager in order to create file on the file system and obtain all the info about the requested file
+    FileManager requested_file(file_name, WRITE);
+    requested_file.calculateFileInfo(m2.file_size);
+    
+    // wait for the receipt of all file chunks
+    size_t chunk_size = requested_file.getChunkSize();
+    for (size_t i = 0; i < requested_file.getNumOfChunks(); i++) {
+        
+        if (i == requested_file.getNumOfChunks() - 1)
+            chunk_size = requested_file.getLastChunkSize();
+
+        // 3) receive the download Mi packet
+        int generic_mi_size = Generic::getSize(DownloadMi::getSize(chunk_size));
+        serialized_packet = new uint8_t[generic_mi_size];
+        res = m_socket->receive(serialized_packet, generic_mi_size);
+        if (res < 0) {
+            return -5;
+        }
+
+        // deserialize the generic packet and verify the fingerprint
+        Generic generic_mi = Generic::deserialize(serialized_packet, generic_mi_size);
+        delete[] serialized_packet;
+        bool verification_res = generic_mi.verifyHMAC(m_hmac_key);
+        if (!verification_res) {
+            cerr << "[-] (Download) HMAC verification failed" << endl;
+            return -6;
+        }
+
+        LOG("(Download) Received valid chunk packet");
+        
+        // get the packet content
+        uint8_t* plaintext = nullptr;
+        int plaintext_size = 0;
+        generic_mi.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+        DownloadMi mi = DownloadMi::deserialize(plaintext, chunk_size);
+        mi.print(chunk_size);
+
+        // copy chunk into the new local file
+        requested_file.writeChunk(mi.chunk, chunk_size);
+
+        #pragma optimize("", off)
+        memset(plaintext, 0, DownloadMi::getSize(chunk_size));
+        #pragma optimize("", on)
+        delete[] plaintext;
+    }
+
+    // final checks
+
+    return 0;
+}
 // --------------------------------
 
 // ----------- MATTEO -------------
@@ -371,6 +481,21 @@ int Client::run() {
 
         else if (command == "download") {
 
+            string file_name;
+            cout << "File to download: ";
+            cin >> file_name;
+
+            if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
+                cerr << "[-] (Run) Invalid filename" << endl;
+                continue;
+            }
+
+            res = download(file_name);
+            if (res < 0) {
+                cerr << "[-] (Run) Download failed with error code " << res << endl;
+            } else {
+                cout << "[+] (Run) Download completed" << endl;
+            }
         }
 
         else if (command == "upload") {
