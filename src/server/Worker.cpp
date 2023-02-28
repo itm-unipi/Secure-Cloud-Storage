@@ -375,7 +375,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
         // generic_m3.print();
         bool verification_res = generic_mi.verifyHMAC(m_hmac_key);
         if (!verification_res) {
-            cerr << "[-] (Upload) HMAC verification failed" << endl;
+            cerr << "[-] (UploadRequest) HMAC verification failed" << endl;
             upload_failed = true;
             incrementCounter();
             continue;
@@ -392,15 +392,49 @@ int Worker::uploadRequest(uint8_t* plaintext) {
         #pragma optimize("", on)
         delete[] plaintext;
 
-        // write the received chunk in the file
-        file.writeChunk(mi.chunk, chunk_size);
+        // check if the counter is correct
+        if (mi.counter != m_counter) {
+            // TODO: use the goto?
+            cerr << "[-] (UploadRequest) Invalid counter" << endl;
+        }
 
         incrementCounter();
 
+        // write the received chunk in the file
+        file.writeChunk(mi.chunk, chunk_size);
+
         // log upload status
         received_size += chunk_size;
-        LOG("(Upload) Received " << received_size << "byte/" << file.getFileSize() << "byte");
+        LOG("(UploadRequest) Received " << received_size << "byte/" << file.getFileSize() << "byte");
     }
+
+    // create the Mn packet
+    UploadMn mn(m_counter, !upload_failed);
+    // mn.print();
+    serialized_packet = mn.serialize();
+
+    // create generic packet
+    Generic generic_mn(m_session_key, m_hmac_key, serialized_packet, UploadMn::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, UploadMn::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_mn.print();
+
+    // 4.) send generic packet
+    serialized_packet = generic_mn.serialize();
+    res = m_socket->send(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    incrementCounter();
+
+    if (upload_failed)
+        cerr << "[-] (UploadRequest) Failed to receive file " + file_path << endl;
+    else
+        cout << "[+] (UploadRequest) Upload of file " + file_path + " completed" << endl;
 
     return 0;
 }

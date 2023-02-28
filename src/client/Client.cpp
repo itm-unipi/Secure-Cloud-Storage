@@ -362,6 +362,12 @@ int Client::upload(string file_name) {
     #pragma optimize("", on)
     delete[] plaintext;
 
+    // check if the counter is correct
+    if (m2.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (Upload) Invalid counter" << endl;
+    }
+
     incrementCounter();
 
     // if the request failed stop
@@ -371,7 +377,6 @@ int Client::upload(string file_name) {
     }
 
     size_t chunk_size = file.getChunkSize();
-
     size_t sent_size = 0;
     uint8_t* chunk_buffer = new uint8_t[chunk_size];
 
@@ -402,7 +407,7 @@ int Client::upload(string file_name) {
         int res = m_socket->send(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
         delete[] serialized_packet;
         if (res < 0) {
-            return -1;
+            return -7;      // TODO
         }
 
         incrementCounter();
@@ -417,6 +422,49 @@ int Client::upload(string file_name) {
     memset(chunk_buffer, 0, chunk_size);
     #pragma optimize("", on)
     delete[] chunk_buffer;
+
+    // 4.) receive the M4 packet
+    serialized_packet = new uint8_t[Generic::getSize(UploadMn::getSize())];
+    res = m_socket->receive(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    if (res < 0) {
+        delete[] serialized_packet;
+        return -8;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_mn = Generic::deserialize(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    delete[] serialized_packet;
+    // generic_mn.print();
+    verification_res = generic_mn.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (Upload) HMAC verification failed" << endl;
+        return -9;
+    }
+
+    // get the Mn packet
+    plaintext = nullptr;
+    plaintext_size = 0;
+    generic_mn.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    UploadMn mn = UploadMn::deserialize(plaintext);
+    // mn.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, UploadMn::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (mn.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (Upload) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    // print the status
+    if (mn.status)
+        cout << "[+] (Upload) Upload completed" << endl;
+    else
+        cerr << "[-] (Upload) Upload failed" << endl;
 
     return 0;
 }

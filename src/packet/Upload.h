@@ -236,7 +236,8 @@ struct UploadMn {
 
         cout << "---------- UPLOAD Mn ---------" << endl;
         cout << "COUNTER: " << counter << endl;
-        cout << "STATUS: " << status << endl;
+        string res = status ? "success" : "failed";
+        cout << "STATUS: " << res << endl;
         cout << "------------------------------" << endl;
     }
 };
