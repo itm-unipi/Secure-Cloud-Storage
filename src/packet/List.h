@@ -153,14 +153,12 @@ struct ListM3 {
 
     ListM3() {}
 
-    ListM3(uint32_t counter, uint8_t* available_files, uint32_t file_list_size) {
+    ListM3(uint32_t counter, uint8_t* available_files, int available_files_size) {
 
-        int available_files_size = (file_list_size * FILE_NAME_SIZE) + (file_list_size - 1);
-        
         this->command_code = FILE_LIST;
         this->counter = counter;
         this->available_files_size = available_files_size;
-        this->available_files = nullptr;
+        this->available_files = new uint8_t[available_files_size];
         memcpy(this->available_files, available_files, available_files_size * sizeof(uint8_t));
 
     }
@@ -212,7 +210,7 @@ struct ListM3 {
         
         size += sizeof(uint8_t);
         size += sizeof(uint32_t);
-        size += (file_list_size * FILE_NAME_SIZE) + (file_list_size - 1);
+        size += ((file_list_size * FILE_NAME_SIZE) + (file_list_size - 1)) * sizeof(uint8_t);
 
         return size;
     }

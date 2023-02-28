@@ -386,13 +386,15 @@ int Client::list(){
 
     LOG("(List) Received M3 valid packet");
 
+    // segmentation fault nella deserialize
     // get the m3 packet
     plaintext = nullptr;
     plaintext_size = 0;
     generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    cout << "[Test] " << plaintext << endl;
     ListM3 m3;
     try{
-        m3 = ListM3::deserialize(plaintext, ListM3::getSize(m2.file_list_size));
+        m3 = ListM3::deserialize(plaintext, plaintext_size);
     } catch (const char* msg){
         // TODO: use the goto?
         cerr << "[-] (List)" << msg << endl;

@@ -344,32 +344,28 @@ int Worker::listRequest(uint8_t* plaintext){
     int available_files_size = (file_list_size * FILE_NAME_SIZE) + (file_list_size - 1);
     available_files = new uint8_t[available_files_size];
     int position = 0;
+
     for(int i = 0; i < (int)file_list_size; i++){
-        char file[30];
+        char file[FILE_NAME_SIZE];
         memset(file, 0, 30);
-        string file_name = "file";
+        string file_name = "file0";
         memcpy(file, file_name.c_str(), file_name.length());
-        char n = 'a' + i;
-        file[file_name.length()] = n;
-        cout << file << endl;
-        memcpy(&available_files + position, file, 30);
-        position += 30;
-        /*if (i < (int)file_list_size - 1){
+        memcpy(available_files + position, file, FILE_NAME_SIZE * sizeof(uint8_t));
+        position += FILE_NAME_SIZE;
+        if (i < (int)file_list_size - 1){
             available_files[position] = (uint8_t)'|';
             position ++;
-        }*/
+        }
     }
         
     cout << "[Test] AVAILABLE FILES: " << endl;
-    for(int i = 0; i < 10; i++)
+    for(int i = 0; i < available_files_size; i++)
         cout << (char)available_files[i];
     cout << endl;
 
-    return 0;
-
     // create the m3 packet
-    ListM3 m3(m_counter, available_files, file_list_size);
-    // delete[] available_files;
+    ListM3 m3(m_counter, available_files, available_files_size);
+    delete[] available_files;
     m3.print();
     serialized_packet = m3.serialize();
 
