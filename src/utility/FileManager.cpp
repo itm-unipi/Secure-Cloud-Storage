@@ -33,7 +33,7 @@ FileManager::FileManager(std::string filename, uint8_t open_type) {
         m_chunk_size = CHUNK_SIZE;
         m_file_size = end - begin;
         m_num_of_chunks = ceil((double)m_file_size / (double)m_chunk_size);
-        m_last_chunk_size = m_file_size % m_chunk_size != 0 ? m_file_size - ((m_num_of_chunks - 1) * m_chunk_size) : 0;
+        m_last_chunk_size = m_file_size % m_chunk_size != 0 ? m_file_size - ((m_num_of_chunks - 1) * m_chunk_size) : m_chunk_size;
     }
 }
 
@@ -67,4 +67,12 @@ int FileManager::writeChunk(uint8_t* buffer, size_t size) {
     }
 
     return 0;
+}
+
+void FileManager::calulateFileInfo(size_t file_size) {
+    // compute number of chunks and size of last chunk
+    m_chunk_size = CHUNK_SIZE;
+    m_file_size = file_size;
+    m_num_of_chunks = ceil((double)m_file_size / (double)m_chunk_size);
+    m_last_chunk_size = m_file_size % m_chunk_size != 0 ? m_file_size - ((m_num_of_chunks - 1) * m_chunk_size) : m_chunk_size;
 }

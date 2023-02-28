@@ -29,6 +29,8 @@ public:
     size_t getFileSize() { return m_file_size; }
     size_t getLastChunkSize() { return m_last_chunk_size; }
     size_t getNumOfChunks() { return m_num_of_chunks; }
+
+    void calulateFileInfo(size_t file_size);
 };
 
 #endif  // _FILEMANAGER_H

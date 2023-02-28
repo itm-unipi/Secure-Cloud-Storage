@@ -294,7 +294,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
 
     // get the M1 packet
     UploadM1 m1 = UploadM1::deserialize(plaintext);
-    m1.print();
+    // m1.print();
     #pragma optimize("", off)
     memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
@@ -311,13 +311,13 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     // TODO: check if the file already exists
     bool file_exists = false;
     
-    // create the result fail packet if the file exists or if the file size is to high, else create the success packet
+    // create the result fail packet if the file exists, else create the success packet
     Result m2;
     if (file_exists)
         m2 = Result(m_counter, false);
     else
         m2 = Result(m_counter, true);
-    m2.print();
+    // m2.print();
     uint8_t* serialized_packet = m2.serialize();
 
     // create generic packet
@@ -342,6 +342,64 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     if (file_exists) {
         cerr << "[-] (UploadRequest) Requested to upload an already existing file" << endl;
         return -2;
+    }
+
+    // prepare the file reception
+    string file_path = "data/" + m_username + "/" + (string)m1.file_name;
+    FileManager file(file_path, WRITE);
+    file.calulateFileInfo(m1.file_size);
+
+    size_t chunk_size = file.getChunkSize();
+    size_t received_size = 0;
+
+    // receive all file chunks
+    bool upload_failed = false;
+    for (size_t i = 0; i < file.getNumOfChunks(); ++i) {
+        // get the chunk size
+        if (i == file.getNumOfChunks() - 1)
+            chunk_size = file.getLastChunkSize();
+
+        // 3+i.) receive the M3+i packet
+        serialized_packet = new uint8_t[Generic::getSize(UploadMi::getSize(chunk_size))];
+        res = m_socket->receive(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
+        if (res < 0) {
+            delete[] serialized_packet;
+            upload_failed = true;
+            incrementCounter();
+            continue;
+        }
+
+        // deserialize the generic packet and verify the fingerprint
+        Generic generic_mi = Generic::deserialize(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
+        delete[] serialized_packet;
+        // generic_m3.print();
+        bool verification_res = generic_mi.verifyHMAC(m_hmac_key);
+        if (!verification_res) {
+            cerr << "[-] (Upload) HMAC verification failed" << endl;
+            upload_failed = true;
+            incrementCounter();
+            continue;
+        }
+
+        // get the Mi packet
+        uint8_t* plaintext = nullptr;
+        int plaintext_size = 0;
+        generic_mi.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+        UploadMi mi = UploadMi::deserialize(plaintext, chunk_size);
+        // mi.print();
+        #pragma optimize("", off)
+        memset(plaintext, 0, UploadMi::getSize(chunk_size));
+        #pragma optimize("", on)
+        delete[] plaintext;
+
+        // write the received chunk in the file
+        file.writeChunk(mi.chunk, chunk_size);
+
+        incrementCounter();
+
+        // log upload status
+        received_size += chunk_size;
+        LOG("(Upload) Received " << received_size << "byte/" << file.getFileSize() << "byte");
     }
 
     return 0;

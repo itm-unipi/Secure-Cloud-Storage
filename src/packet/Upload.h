@@ -109,6 +109,7 @@ struct UploadMi {
         this->command_code = FILE_CHUNK;
         this->counter = counter;
         this->chunk = new uint8_t[chunk_size];
+        memcpy(this->chunk, chunk, chunk_size);
         this->chunk_size = chunk_size;
     } 
 
@@ -139,6 +140,7 @@ struct UploadMi {
         memcpy(&uploadMi.counter, buffer + position, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
+        uploadMi.chunk = new uint8_t[chunk_size];
         memcpy(uploadMi.chunk, buffer + position, chunk_size * sizeof(uint8_t));
         uploadMi.chunk_size = chunk_size;
 
@@ -160,11 +162,12 @@ struct UploadMi {
 
         cout << "--------- UPLOAD M3+i --------" << endl;
         cout << "COUNTER: " << counter << endl;
-        cout << "CHUNK (first 10byte): " << endl;
+        cout << "CHUNK (first 10byte): ";
         int byte_to_print = chunk_size < 10 ? chunk_size : 10;
         for (int i = 0; i < byte_to_print; ++i)
-            cout << hex << chunk[i];
+            cout << hex << (int)chunk[i];
         cout << dec << endl;
+        cout << "CHUNK SIZE: " << chunk_size << endl;
         cout << "------------------------------" << endl;
     }
 };

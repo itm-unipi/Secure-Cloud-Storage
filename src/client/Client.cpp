@@ -312,7 +312,7 @@ int Client::upload(string file_name) {
 
     // create the M1 packet
     UploadM1 m1(m_counter, file_name, file.getFileSize());
-    m1.print();
+    // m1.print();
     uint8_t* serialized_packet = m1.serialize();
 
     // create generic packet
@@ -356,7 +356,7 @@ int Client::upload(string file_name) {
     int plaintext_size = 0;
     generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     Result m2 = Result::deserialize(plaintext);
-    m2.print();
+    // m2.print();
     #pragma optimize("", off)
     memset(plaintext, 0, Result::getSize());
     #pragma optimize("", on)
@@ -369,6 +369,54 @@ int Client::upload(string file_name) {
         cerr << "[-] (Upload) The file already exists in the cloud" << endl;
         return -6;
     }
+
+    size_t chunk_size = file.getChunkSize();
+
+    size_t sent_size = 0;
+    uint8_t* chunk_buffer = new uint8_t[chunk_size];
+
+    // sent all file chunks
+    for (size_t i = 0; i < file.getNumOfChunks(); ++i) {
+        // get the chunk size
+        if (i == file.getNumOfChunks() - 1)
+            chunk_size = file.getLastChunkSize();
+
+        // read the next chunk
+        file.readChunk(chunk_buffer, chunk_size);
+
+        // create the M3+i packet
+        UploadMi mi(m_counter, chunk_buffer, chunk_size);
+        // mi.print();
+        serialized_packet = mi.serialize();
+
+        // create generic packet
+        Generic generic_mi(m_session_key, m_hmac_key, serialized_packet, UploadMi::getSize(chunk_size));
+        #pragma optimize("", off)
+        memset(serialized_packet, 0, UploadMi::getSize(chunk_size));
+        #pragma optimize("", on)
+        delete[] serialized_packet;
+        // generic_mi.print();
+
+        // 3.) send generic packet
+        serialized_packet = generic_mi.serialize();
+        int res = m_socket->send(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
+        delete[] serialized_packet;
+        if (res < 0) {
+            return -1;
+        }
+
+        incrementCounter();
+
+        // print upload status
+        sent_size += chunk_size;
+        cout << "[+] (Upload) Uploaded " << sent_size << "byte/" << file.getFileSize() << "byte" << endl;
+    }
+
+    // clean the buffer
+    #pragma optimize("", off)
+    memset(chunk_buffer, 0, chunk_size);
+    #pragma optimize("", on)
+    delete[] chunk_buffer;
 
     return 0;
 }
