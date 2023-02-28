@@ -305,6 +305,8 @@ int Client::download(string file_name) {
         return -1;
     }
 
+    incrementCounter();
+
     // 2) receive the download M2 packet
     int generic_m2_size = Generic::getSize(DownloadM2::getSize());
     serialized_packet = new uint8_t[generic_m2_size];
@@ -335,9 +337,16 @@ int Client::download(string file_name) {
     #pragma optimize("", on)
     delete[] plaintext;
 
+    // check if the counter is correct
+    if (m2.counter != m_counter) {
+        cerr << "[-] (Download) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
     // check if the requested file has been found on the cloud
     if (m2.command_code == FILE_NOT_FOUND) {
-        LOG("(Dowload) File not found")
+        LOG("(Download) File not found")
         return -4;
     } else {
         LOG("(Download) File found")
@@ -349,6 +358,8 @@ int Client::download(string file_name) {
     
     // wait for the receipt of all file chunks
     size_t chunk_size = requested_file.getChunkSize();
+    size_t received_bytes = 0;
+    int progress = 0;
     for (size_t i = 0; i < requested_file.getNumOfChunks(); i++) {
         
         if (i == requested_file.getNumOfChunks() - 1)
@@ -372,13 +383,15 @@ int Client::download(string file_name) {
         }
 
         LOG("(Download) Received valid chunk packet");
+
+        received_bytes += chunk_size;
         
         // get the packet content
         uint8_t* plaintext = nullptr;
         int plaintext_size = 0;
         generic_mi.decryptCiphertext(m_session_key, plaintext, plaintext_size);
         DownloadMi mi = DownloadMi::deserialize(plaintext, chunk_size);
-        mi.print(chunk_size);
+        // mi.print(chunk_size);
 
         // copy chunk into the new local file
         requested_file.writeChunk(mi.chunk, chunk_size);
@@ -387,9 +400,18 @@ int Client::download(string file_name) {
         memset(plaintext, 0, DownloadMi::getSize(chunk_size));
         #pragma optimize("", on)
         delete[] plaintext;
+
+        // check if the counter is correct
+        if (mi.counter != m_counter) {
+            cerr << "[-] (Download) Invalid counter" << endl;
+        }
+
+        incrementCounter();
     }
 
-    // final checks
+    if (received_bytes != requested_file.getFileSize()) {
+        return -7; 
+    }
 
     return 0;
 }
@@ -494,7 +516,7 @@ int Client::run() {
             if (res < 0) {
                 cerr << "[-] (Run) Download failed with error code " << res << endl;
             } else {
-                cout << "[+] (Run) Download completed" << endl;
+                cout << "[+] (Run) Download completed successfully" << endl;
             }
         }
 

@@ -297,6 +297,13 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     #pragma optimize("", on)
     delete[] plaintext;
 
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        cerr << "[-] (DownloadRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
     // check if the requested file exists in the user storage
     string file_path = "data/" + m_username + "/" + string(m1.file_name);
     LOG("(DownloadRequest) Searching for " + file_path);
@@ -321,6 +328,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     }
 
     LOG("(DownloadRequest) Sent result packet");
+    incrementCounter();
 
     if (!file_found) {
         return -1;
@@ -332,7 +340,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     cout << "LAST CHUNK SIZE: " << requested_file.getLastChunkSize() << " bytes" << endl;
     cout << "----------------------------------" << endl;
 
-    // 2) send the file chunks
+    // 2) send file chunks
     uint8_t* buffer = new uint8_t[requested_file.getChunkSize()];
     size_t chunk_size = requested_file.getChunkSize();
     for (size_t i = 0; i < requested_file.getNumOfChunks(); i++) {
@@ -357,6 +365,8 @@ int Worker::downloadRequest(uint8_t* plaintext) {
         if (res < 0) {
             return -1;
         }
+
+        incrementCounter();
     }
 
     LOG("(DownloadRequest) File transfer completed");

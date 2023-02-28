@@ -41,7 +41,11 @@ struct DownloadM1 {
         memcpy(buffer + position, &this->counter, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        memcpy(buffer + position, this->file_name, FILE_NAME_SIZE * sizeof(char));
+        memcpy(buffer + position, this->file_name, FILE_NAME_SIZE * sizeof(uint8_t));
+        position += FILE_NAME_SIZE * sizeof(uint8_t);
+        
+        // add random bytes
+        RAND_bytes(buffer + position, COMMAND_FIELD_PACKET_SIZE - position);
 
         return buffer; 
     }
@@ -177,6 +181,8 @@ struct DownloadMi {
         memcpy(this->chunk, chunk, chunk_size * sizeof(uint8_t));
     }   
 
+    ~DownloadMi() { delete[] chunk; }
+
     uint8_t* serialize(int chunk_size) const { 
 
         uint8_t* buffer = new uint8_t[DownloadMi::getSize(chunk_size)];
@@ -225,9 +231,9 @@ struct DownloadMi {
         cout << "--------- DOWNLOAD M3+i ----------" << endl;
         cout << "COMMAND CODE: " << printCommandCodeDescription(this->command_code) << endl;
         cout << "COUNTER: " << this->counter << endl;
-        cout << "FILE CONTENT: " << endl;
+        cout << "CHUNK CONTENT (" << chunk_size << " bytes): " << endl;
         for (int i = 0; i < chunk_size; ++i)
-            cout << hex << (int)chunk[i];
+            cout << hex << (int)chunk[i] << dec;
         cout << endl;
         cout << "----------------------------------" << endl;
     }

@@ -41,7 +41,7 @@ string printCommandCodeDescription(uint8_t code) {
         case 7:
             return "FILE_NOT_FOUND";
         // --------------------------------
-        case 10:
+        case 13:
             return "LOGOUT_REQ";
     
         default:
