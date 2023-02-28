@@ -6,6 +6,7 @@
 #include "../packet/Generic.h"
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
+#include "../packet/List.h"
 #include "../packet/Result.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
@@ -289,6 +290,131 @@ int Client::logout() {
 // --------------------------------
 
 // ---------- GIANLUCA ------------
+
+int Client::list(){
+
+    // create the M1 packet
+    ListM1 m1(m_counter);
+    m1.print();
+    uint8_t* serialized_packet = m1.serialize();
+
+    // create generic packet
+    Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    generic_m1.print();
+
+    // 1.) send generic packet
+    serialized_packet = generic_m1.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    LOG("(List) Senr M1 packet");
+
+    incrementCounter();
+
+    // 2.) receive the generic packet
+    serialized_packet = new uint8_t[Generic::getSize(ListM2::getSize())];
+    res = m_socket->receive(serialized_packet, Generic::getSize(ListM2::getSize()));
+    if (res < 0) {
+        // TODO: errore + delete
+        delete[] serialized_packet;
+        return -2;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_m2 = Generic::deserialize(serialized_packet, Generic::getSize(ListM2::getSize()));
+    delete[] serialized_packet;
+    generic_m2.print();
+    bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (List) HMAC verification failed" << endl;
+        return -3;
+    }
+
+    LOG("(List) Received M2 valid packet");
+
+    // get the m2 packet
+    uint8_t* plaintext = nullptr;
+    int plaintext_size = 0;
+    generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    ListM2 m2;
+    try{
+        m2 = ListM2::deserialize(plaintext);
+    } catch (const char* msg){
+        // TODO: use the goto?
+        cerr << "[-] (List)" << msg << endl;
+        return -4;
+    }
+    m2.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m2.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (List) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    // 3.) receive the generic packet
+    serialized_packet = new uint8_t[Generic::getSize(ListM3::getSize(m2.file_list_size))];
+    res = m_socket->receive(serialized_packet, Generic::getSize(ListM3::getSize(m2.file_list_size)));
+    if (res < 0) {
+        // TODO: errore + delete
+        delete[] serialized_packet;
+        return -5;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_m3 = Generic::deserialize(serialized_packet, Generic::getSize(ListM3::getSize(m2.file_list_size)));
+    delete[] serialized_packet;
+    generic_m3.print();
+    verification_res = generic_m3.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (List) HMAC verification failed" << endl;
+        return -6;
+    }
+
+    LOG("(List) Received M3 valid packet");
+
+    // get the m3 packet
+    plaintext = nullptr;
+    plaintext_size = 0;
+    generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    ListM3 m3;
+    try{
+        m3 = ListM3::deserialize(plaintext, ListM3::getSize(m2.file_list_size));
+    } catch (const char* msg){
+        // TODO: use the goto?
+        cerr << "[-] (List)" << msg << endl;
+        return -7;
+    }
+    m3.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m2.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (List) Invalid counter" << endl;
+        return -8;
+    }
+
+    incrementCounter();
+
+    return 0;
+}
 // --------------------------------
 
 bool Client::incrementCounter() {
@@ -366,7 +492,14 @@ int Client::run() {
         cin >> command;
 
         if (command == "list") {
+            res = list();
 
+            if (res < 0) {
+                cerr << "[-] (Run) list failed with error code " << res << endl;
+                return -1;
+            } 
+
+            cout << "[+] (Run) list completed" << endl;
         }
 
         else if (command == "download") {

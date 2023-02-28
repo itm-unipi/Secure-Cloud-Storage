@@ -18,7 +18,7 @@ using namespace std;
 #define FILE_LIST_SIZE  10
 #define FILE_LIST       11
 #define RENAME_REQ      12
-#define LOGOUT_REQ      13
+#define LOGOUT_REQ      13     
 
 #define COMMAND_FIELD_PACKET_SIZE 65 * sizeof(uint8_t)          // the longest command packet is the Rename Command (65 byte)
 
@@ -26,13 +26,22 @@ string printCommandCodeDescription(uint8_t code) {
 
     switch (code)
     {
-        case 0:
+        case REQ_FAILED:
             return "REQ_FAILED";
 
-        case 1:
+        case REQ_SUCCESS:
             return "REQ_SUCCESS";
 
-        case 10:
+        case FILE_LIST_REQ:
+            return "FILE_LIST_REQ";
+        
+        case FILE_LIST_SIZE:
+            return "FILE_LIST_SIZE";
+
+        case FILE_LIST:
+            return "FILE_LIST";
+
+        case LOGOUT_REQ:
             return "LOGOUT_REQ";
     
         default:

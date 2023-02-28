@@ -109,6 +109,10 @@ struct ListM2 {
         memcpy(&listM2.command_code, buffer, sizeof(uint8_t));
         position += sizeof(uint8_t);
 
+        // check if the command code is correct
+        if (listM2.command_code != FILE_LIST_SIZE)
+            throw "Unexpeted packet";
+
         memcpy(&listM2.counter, buffer + position, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
@@ -156,6 +160,7 @@ struct ListM3 {
         this->command_code = FILE_LIST;
         this->counter = counter;
         this->available_files_size = available_files_size;
+        this->available_files = nullptr;
         memcpy(this->available_files, available_files, available_files_size * sizeof(uint8_t));
 
     }
@@ -189,6 +194,10 @@ struct ListM3 {
         memcpy(&listM3.command_code, buffer, sizeof(uint8_t));
         position += sizeof(uint8_t);
 
+        // check if the command code is correct
+        if (listM3.command_code != FILE_LIST)
+            throw "Unexpeted packet";
+
         memcpy(&listM3.counter, buffer + position, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
@@ -197,7 +206,7 @@ struct ListM3 {
         return listM3;
     }
 
-    static int getSize(uint32_t file_list_size) {
+    static int getSize(uint32_t file_list_size) {  // file_list_size = number of files
 
         int size = 0;
         
@@ -213,7 +222,7 @@ struct ListM3 {
         cout << "COMMAND CODE: " << printCommandCodeDescription(command_code) << endl;
         cout << "COUNTER: " << counter << endl;
         for (int i = 0; i < available_files_size; ++i)
-            cout << (char)available_files;
+            cout << (char)available_files[i];
         cout << endl;
         cout << "------------------------------" << endl;
     }

@@ -6,3 +6,7 @@
 * il filename non può avere il carattere '|', perché è usato come divisore
 * cancellare print commentate
 * Sistemare lo script di test
+
+## Gianluca
+
+* vedere se gli errori del logout sono numerati correttamente

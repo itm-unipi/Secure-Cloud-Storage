@@ -5,6 +5,7 @@
 #include "../packet/Generic.h"
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
+#include "../packet/List.h"
 #include "../packet/Result.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
@@ -50,8 +51,10 @@ int Worker::loginRequest() {
     EVP_PKEY* user_public_key = nullptr;
     if (!bp)
         m2.result = 0;
-    else
+    else{
+        m_username = (string)m1.username;
         user_public_key = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL);
+    }
     BIO_free(bp);
 
     // 2.) send the result of existence of the user
@@ -289,6 +292,109 @@ int Worker::logoutRequest(uint8_t* plaintext) {
 // --------------------------------
 
 // ---------- GIANLUCA ------------
+
+int Worker::listRequest(uint8_t* plaintext){
+
+    // deserialize the packet
+    ListM1 m1 = ListM1::deserialize(plaintext);
+    m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (ListRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    // TODO get file_list_size
+    uint32_t file_list_size = 5;
+
+    // create the m2 packet
+    ListM2 m2(m_counter, file_list_size);
+    m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, ListM2::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, ListM2::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(ListM2::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    LOG("(ListRequest) Sent M2 packet");
+
+    incrementCounter();
+
+    // TODO get available_files
+    uint8_t* available_files = nullptr;
+    int available_files_size = (file_list_size * FILE_NAME_SIZE) + (file_list_size - 1);
+    available_files = new uint8_t[available_files_size];
+    int position = 0;
+    for(int i = 0; i < (int)file_list_size; i++){
+        char file[30];
+        memset(file, 0, 30);
+        string file_name = "file";
+        memcpy(file, file_name.c_str(), file_name.length());
+        char n = 'a' + i;
+        file[file_name.length()] = n;
+        cout << file << endl;
+        memcpy(&available_files + position, file, 30);
+        position += 30;
+        /*if (i < (int)file_list_size - 1){
+            available_files[position] = (uint8_t)'|';
+            position ++;
+        }*/
+    }
+        
+    cout << "[Test] AVAILABLE FILES: " << endl;
+    for(int i = 0; i < 10; i++)
+        cout << (char)available_files[i];
+    cout << endl;
+
+    return 0;
+
+    // create the m3 packet
+    ListM3 m3(m_counter, available_files, file_list_size);
+    // delete[] available_files;
+    m3.print();
+    serialized_packet = m3.serialize();
+
+    // create generic packet
+    Generic generic_m3(m_session_key, m_hmac_key, serialized_packet, ListM3::getSize(file_list_size));
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, ListM3::getSize(file_list_size));
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    generic_m3.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m3.serialize();
+    res = m_socket->send(serialized_packet, Generic::getSize(ListM3::getSize(file_list_size)));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    LOG("(ListRequest) Sent M3 packet");
+
+
+    return 0;
+
+}
 // --------------------------------
 
 
@@ -347,6 +453,9 @@ int Worker::run() {
 
         switch (command_code)
         {
+            case FILE_LIST_REQ:
+                listRequest(plaintext);
+                break;
             case LOGOUT_REQ:
                 logoutRequest(plaintext);
                 break;
@@ -356,7 +465,6 @@ int Worker::run() {
                 break;
         }
 
-        return 0;
     }
 
     return 0;

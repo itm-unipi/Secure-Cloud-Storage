@@ -24,6 +24,10 @@ class Worker {
     // --------------------------------
 
     // ---------- GIANLUCA ------------
+
+    string m_username; 
+    int listRequest(uint8_t* plaintext);
+
     // --------------------------------
 
     bool incrementCounter();
