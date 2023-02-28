@@ -48,6 +48,10 @@ struct UploadM1 {
         position += FILE_NAME_SIZE * sizeof(char);
 
         memcpy(buffer + position, &file_size, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
+        // add random bytes
+        RAND_bytes(buffer + position, COMMAND_FIELD_PACKET_SIZE - position);
 
         return buffer;
     }
@@ -112,6 +116,8 @@ struct UploadMi {
         memcpy(this->chunk, chunk, chunk_size);
         this->chunk_size = chunk_size;
     } 
+
+    ~UploadMi() { delete[] chunk; }
 
     uint8_t* serialize() const { 
 

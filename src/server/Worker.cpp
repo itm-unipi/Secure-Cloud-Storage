@@ -336,6 +336,8 @@ int Worker::uploadRequest(uint8_t* plaintext) {
         return -1;
     }
 
+    LOG("(UploadRequest) Sent file check result packet");
+
     incrementCounter();
 
     // stop operation if needed
@@ -428,6 +430,8 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     if (res < 0) {
         return -1;
     }
+
+    LOG("(UploadRequest) Sent result packet");
 
     incrementCounter();
 
