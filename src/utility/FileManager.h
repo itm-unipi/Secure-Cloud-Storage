@@ -6,7 +6,7 @@ using namespace std;
 
 #define READ 0
 #define WRITE 1
-#define CHUNK_SIZE 10 // 64 * 1024
+#define CHUNK_SIZE 64 * 1024
 
 class FileManager {
 

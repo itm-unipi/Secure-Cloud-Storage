@@ -350,7 +350,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
 
         requested_file.readChunk(buffer, chunk_size * sizeof(uint8_t));
         DownloadMi mi(m_counter, buffer, chunk_size);
-        mi.print(chunk_size);
+        // mi.print(chunk_size);
         serialized_packet = mi.serialize(chunk_size);
 
         Generic generic_mi(m_session_key, m_hmac_key, serialized_packet, DownloadMi::getSize(chunk_size));

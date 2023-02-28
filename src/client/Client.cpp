@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstring>
+#include <cmath>
 #include <openssl/pem.h>
 
 #include "Client.h"
@@ -289,7 +290,7 @@ int Client::download(string file_name) {
 
     // 1) send command packet along with the file_name to download
     DownloadM1 m1(m_counter, file_name);
-    m1.print();
+    // m1.print();
     uint8_t* serialized_packet = m1.serialize();
 
     Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
@@ -331,7 +332,7 @@ int Client::download(string file_name) {
     int plaintext_size = 0;
     generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     DownloadM2 m2 = DownloadM2::deserialize(plaintext);
-    m2.print();
+    // m2.print();
     #pragma optimize("", off)
     memset(plaintext, 0, DownloadM2::getSize());
     #pragma optimize("", on)
@@ -359,7 +360,7 @@ int Client::download(string file_name) {
     // wait for the receipt of all file chunks
     size_t chunk_size = requested_file.getChunkSize();
     size_t received_bytes = 0;
-    int progress = 0;
+    int new_progress, progress = -1;
     for (size_t i = 0; i < requested_file.getNumOfChunks(); i++) {
         
         if (i == requested_file.getNumOfChunks() - 1)
@@ -383,8 +384,6 @@ int Client::download(string file_name) {
         }
 
         LOG("(Download) Received valid chunk packet");
-
-        received_bytes += chunk_size;
         
         // get the packet content
         uint8_t* plaintext = nullptr;
@@ -407,6 +406,13 @@ int Client::download(string file_name) {
         }
 
         incrementCounter();
+        
+        received_bytes += chunk_size;
+        new_progress = ceil(((double)received_bytes / requested_file.getFileSize()) * 100);
+        if (progress != new_progress) {
+            cout << "Downloading..." << new_progress << "%" << endl;
+        }
+        progress = new_progress;
     }
 
     if (received_bytes != requested_file.getFileSize()) {
