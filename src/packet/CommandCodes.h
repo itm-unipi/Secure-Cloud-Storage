@@ -32,7 +32,16 @@ string printCommandCodeDescription(uint8_t code) {
         case 1:
             return "REQ_SUCCESS";
 
-        case 10:
+        case 2:
+            return "UPLOAD_REQ";
+
+        case 3:
+            return "FILE_CHUNK";
+
+        case 4:
+            return "TRANSFER_ACK";
+
+        case 13:
             return "LOGOUT_REQ";
     
         default:

@@ -6,6 +6,7 @@
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
 #include "../packet/Result.h"
+#include "../packet/Upload.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
@@ -288,6 +289,64 @@ int Worker::logoutRequest(uint8_t* plaintext) {
 // --------------------------------
 
 // ----------- MATTEO -------------
+
+int Worker::uploadRequest(uint8_t* plaintext) {
+
+    // get the M1 packet
+    UploadM1 m1 = UploadM1::deserialize(plaintext);
+    m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (UploadRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    // TODO: check if the file already exists
+    bool file_exists = false;
+    
+    // create the result fail packet if the file exists or if the file size is to high, else create the success packet
+    Result m2;
+    if (file_exists)
+        m2 = Result(m_counter, false);
+    else
+        m2 = Result(m_counter, true);
+    m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, Result::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    incrementCounter();
+
+    // stop operation if needed
+    if (file_exists) {
+        cerr << "[-] (UploadRequest) Requested to upload an already existing file" << endl;
+        return -2;
+    }
+
+    return 0;
+}
+
 // --------------------------------
 
 // ---------- GIANLUCA ------------
@@ -349,6 +408,10 @@ int Worker::run() {
 
         switch (command_code)
         {
+            case UPLOAD_REQ:
+                uploadRequest(plaintext);
+                break;
+
             case LOGOUT_REQ:
                 logoutRequest(plaintext);
                 break;

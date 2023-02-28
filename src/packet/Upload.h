@@ -162,7 +162,7 @@ struct UploadMi {
         cout << "COUNTER: " << counter << endl;
         cout << "CHUNK (first 10byte): " << endl;
         int byte_to_print = chunk_size < 10 ? chunk_size : 10;
-        for (int i = 0; i < chunk_size; ++i)
+        for (int i = 0; i < byte_to_print; ++i)
             cout << hex << chunk[i];
         cout << dec << endl;
         cout << "------------------------------" << endl;
