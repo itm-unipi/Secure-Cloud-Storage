@@ -648,7 +648,7 @@ int Client::run() {
         return -1;
     }
     if (strspn(password.c_str(), ok_chars) < strlen(password.c_str())) { 
-        cerr << "[-] (Run) Not valid username" << endl;
+        cerr << "[-] (Run) Not valid password" << endl;
         return -1;
     }
     if (m_username.length() >= 30) {
@@ -660,7 +660,7 @@ int Client::run() {
     string private_key_file = "resources/encrypted_keys/" + m_username + "_key.pem";
     BIO *bio = BIO_new_file(private_key_file.c_str(), "r");
     if (!bio) {
-        cerr << "[-] (Run) Failed to open encrypted key PEM file" << endl;
+        cerr << "[-] (Run) Username not registered" << endl;
         return -2;
     }
     
@@ -668,12 +668,18 @@ int Client::run() {
     m_long_term_key = PEM_read_bio_PrivateKey(bio, 0, 0, (void *)password.c_str());
     BIO_free(bio);
 
+    // check if the password is correct
+    if (!m_long_term_key) {
+        cerr << "[-] (Run) Wrong password" << endl;
+        return -3;
+    }
+
     // connect to the server
     try {
         m_socket = new CommunicationSocket(SERVER_IP, SERVER_PORT);
     } catch (const std::exception& e) {
-        std::cerr << "[-] (Run) Exception: " << e.what() << std::endl;
-        return -3;
+        cerr << "[-] (Run) Exception: " << e.what() << endl;
+        return -4;
     }
 
     // ----------------------------------------------

@@ -18,7 +18,7 @@ class FileManager {
     size_t m_chunk_size, m_file_size, m_last_chunk_size, m_num_of_chunks;
 
 public:
-    FileManager(std::string filename, uint8_t open_type);
+    FileManager(string filename, uint8_t open_type);
     FileManager(const FileManager&) = delete;
     ~FileManager();
 
