@@ -357,11 +357,6 @@ int Worker::listRequest(uint8_t* plaintext){
             position ++;
         }
     }
-        
-    cout << "[Test] AVAILABLE FILES: " << endl;
-    for(int i = 0; i < available_files_size; i++)
-        cout << (char)available_files[i];
-    cout << endl;
 
     // create the m3 packet
     ListM3 m3(m_counter, available_files, available_files_size);
@@ -376,6 +371,13 @@ int Worker::listRequest(uint8_t* plaintext){
     #pragma optimize("", on)
     delete[] serialized_packet;
     generic_m3.print();
+
+    //Test
+    plaintext = nullptr;
+    int plaintext_size = 0;
+    generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    ListM3 m4 = ListM3::deserialize(plaintext, plaintext_size);
+    m4.print();
 
     // 2.) send generic packet
     serialized_packet = generic_m3.serialize();

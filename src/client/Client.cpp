@@ -314,7 +314,7 @@ int Client::list(){
         return -1;
     }
 
-    LOG("(List) Senr M1 packet");
+    LOG("(List) Sent M1 packet");
 
     incrementCounter();
 
@@ -342,16 +342,19 @@ int Client::list(){
     // get the m2 packet
     uint8_t* plaintext = nullptr;
     int plaintext_size = 0;
-    generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
-    ListM2 m2;
-    try{
-        m2 = ListM2::deserialize(plaintext);
-    } catch (const char* msg){
-        // TODO: use the goto?
-        cerr << "[-] (List)" << msg << endl;
+    uint8_t command_code = generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    // check if the command code is correct
+    if (command_code != FILE_LIST_SIZE){
+        cerr << " [-] (List) Unexpeted packet" << endl;
+        #pragma optimize("", off)
+        memset(plaintext, 0, ListM2::getSize());
+        #pragma optimize("", on)
+        delete[] plaintext;
         return -4;
     }
+    ListM2 m2 = ListM2::deserialize(plaintext);
     m2.print();
+
     #pragma optimize("", off)
     memset(plaintext, 0, ListM2::getSize());
     #pragma optimize("", on)
@@ -361,6 +364,7 @@ int Client::list(){
     if (m2.counter != m_counter) {
         // TODO: use the goto?
         cerr << "[-] (List) Invalid counter" << endl;
+        return -5;
     }
 
     incrementCounter();
@@ -371,7 +375,7 @@ int Client::list(){
     if (res < 0) {
         // TODO: errore + delete
         delete[] serialized_packet;
-        return -5;
+        return -6;
     }
 
     // deserialize the generic packet and verify the fingerprint
@@ -381,39 +385,52 @@ int Client::list(){
     verification_res = generic_m3.verifyHMAC(m_hmac_key);
     if (!verification_res) {
         cerr << "[-] (List) HMAC verification failed" << endl;
-        return -6;
+        return -7;
     }
 
     LOG("(List) Received M3 valid packet");
 
-    // segmentation fault nella deserialize
     // get the m3 packet
     plaintext = nullptr;
     plaintext_size = 0;
-    generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
-    cout << "[Test] " << plaintext << endl;
-    ListM3 m3;
-    try{
-        m3 = ListM3::deserialize(plaintext, plaintext_size);
-    } catch (const char* msg){
-        // TODO: use the goto?
-        cerr << "[-] (List)" << msg << endl;
-        return -7;
+    command_code = generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    // check if the command code is correct
+    if (command_code != FILE_LIST){
+        cerr << " [-] (List) Unexpeted packet" << endl;
+        #pragma optimize("", off)
+        memset(plaintext, 0, ListM3::getSize(m2.file_list_size));
+        #pragma optimize("", on)
+        delete[] plaintext;
+        return -8;
     }
+    ListM3 m3 = ListM3::deserialize(plaintext, plaintext_size);
     m3.print();
+
     #pragma optimize("", off)
     memset(plaintext, 0, ListM3::getSize(m2.file_list_size));
     #pragma optimize("", on)
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m2.counter != m_counter) {
+    if (m3.counter != m_counter) {
         // TODO: use the goto?
         cerr << "[-] (List) Invalid counter" << endl;
-        return -8;
+        return -9;
     }
 
     incrementCounter();
+
+
+    //print file list
+    cout << "---------- LIST  ------------" << endl;
+    int list_size = (FILE_NAME_SIZE * m2.file_list_size) + (m2.file_list_size - 1);
+    for(int i = 0; i < list_size; i++){
+        uint8_t file[FILE_NAME_SIZE];
+        memcpy(&file, m3.available_files + i, FILE_NAME_SIZE);
+        i += FILE_NAME_SIZE * sizeof(uint8_t);
+        cout << (char*)file << endl;
+    }
+    cout << "------------------------------" << endl;
 
     return 0;
 }

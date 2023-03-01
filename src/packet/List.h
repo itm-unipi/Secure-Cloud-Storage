@@ -109,10 +109,6 @@ struct ListM2 {
         memcpy(&listM2.command_code, buffer, sizeof(uint8_t));
         position += sizeof(uint8_t);
 
-        // check if the command code is correct
-        if (listM2.command_code != FILE_LIST_SIZE)
-            throw "Unexpeted packet";
-
         memcpy(&listM2.counter, buffer + position, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
@@ -163,7 +159,7 @@ struct ListM3 {
 
     }
 
-    ~ListM3() { delete[] available_files; }
+    ~ListM3() { delete[] available_files;}
 
     uint8_t* serialize() const {
 
@@ -187,19 +183,16 @@ struct ListM3 {
 
         ListM3 listM3;
         listM3.available_files_size = buffer_size - (sizeof(uint8_t) + sizeof(uint32_t));
-
+        
         size_t position = 0;
         memcpy(&listM3.command_code, buffer, sizeof(uint8_t));
         position += sizeof(uint8_t);
 
-        // check if the command code is correct
-        if (listM3.command_code != FILE_LIST)
-            throw "Unexpeted packet";
-
         memcpy(&listM3.counter, buffer + position, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        memcpy(&listM3.available_files, buffer + position, listM3.available_files_size * sizeof(uint8_t));
+        listM3.available_files = new uint8_t[listM3.available_files_size];
+        memcpy(listM3.available_files, buffer + position, listM3.available_files_size * sizeof(uint8_t));
 
         return listM3;
     }
