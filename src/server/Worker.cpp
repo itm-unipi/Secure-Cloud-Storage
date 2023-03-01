@@ -1,5 +1,8 @@
 #include <openssl/pem.h>
 #include <openssl/evp.h>
+#include <fstream>
+#include <filesystem>
+#include <vector>
 
 #include "Worker.h"
 #include "../packet/Generic.h"
@@ -307,12 +310,53 @@ int Worker::listRequest(uint8_t* plaintext){
     if (m1.counter != m_counter) {
         // TODO: use the goto?
         cerr << "[-] (ListRequest) Invalid counter" << endl;
+        return -1;
     }
 
     incrementCounter();
 
-    // TODO get file_list_size
-    uint32_t file_list_size = 5;
+    vector<string> files;
+    string path = "data/" + m_username;
+    filesystem::directory_entry dir(path);
+
+    if (dir.is_directory()){
+        for (const auto& file : filesystem::directory_iterator(path)){
+
+            ifstream input(file.path());
+            if (input.is_open()){
+                // get file name
+                string file_name = file.path();
+                file_name.replace(0, path.length() + 1, "");
+                files.push_back(file_name);
+                input.close();
+            }
+        }
+    }
+    else{
+        cerr << "[-] Invalid Directory" << endl;
+        return -2;
+    }
+
+    uint32_t file_list_size = files.size();
+
+    uint8_t* available_files = nullptr;
+    int available_files_size = (file_list_size * FILE_NAME_SIZE) + (file_list_size - 1);
+    available_files = new uint8_t[available_files_size];
+    int position = 0;
+
+    for(int i = 0; i < (int)file_list_size; i++){
+        char file[FILE_NAME_SIZE];
+        memset(file, 0, 30);
+        memcpy(file, files[i].c_str(), files[i].length());
+        memcpy(available_files + position, file, FILE_NAME_SIZE * sizeof(uint8_t));
+        position += FILE_NAME_SIZE;
+        if (i < (int)file_list_size - 1){
+            available_files[position] = (uint8_t)'|';
+            position ++;
+        }
+    }
+
+    LOG("(List) get file names of the user");
 
     // create the m2 packet
     ListM2 m2(m_counter, file_list_size);
@@ -332,31 +376,12 @@ int Worker::listRequest(uint8_t* plaintext){
     int res = m_socket->send(serialized_packet, Generic::getSize(ListM2::getSize()));
     delete[] serialized_packet;
     if (res < 0) {
-        return -1;
+        return -3;
     }
 
     LOG("(ListRequest) Sent M2 packet");
 
     incrementCounter();
-
-    // TODO get available_files
-    uint8_t* available_files = nullptr;
-    int available_files_size = (file_list_size * FILE_NAME_SIZE) + (file_list_size - 1);
-    available_files = new uint8_t[available_files_size];
-    int position = 0;
-
-    for(int i = 0; i < (int)file_list_size; i++){
-        char file[FILE_NAME_SIZE];
-        memset(file, 0, 30);
-        string file_name = "file0";
-        memcpy(file, file_name.c_str(), file_name.length());
-        memcpy(available_files + position, file, FILE_NAME_SIZE * sizeof(uint8_t));
-        position += FILE_NAME_SIZE;
-        if (i < (int)file_list_size - 1){
-            available_files[position] = (uint8_t)'|';
-            position ++;
-        }
-    }
 
     // create the m3 packet
     ListM3 m3(m_counter, available_files, available_files_size);
@@ -384,7 +409,7 @@ int Worker::listRequest(uint8_t* plaintext){
     res = m_socket->send(serialized_packet, Generic::getSize(ListM3::getSize(file_list_size)));
     delete[] serialized_packet;
     if (res < 0) {
-        return -1;
+        return -4;
     }
 
     LOG("(ListRequest) Sent M3 packet");
@@ -458,7 +483,7 @@ int Worker::run() {
                 break;
             case LOGOUT_REQ:
                 logoutRequest(plaintext);
-                break;
+                return 0;
             
             default:
                 cerr << "[-] (Run) Invalid command received" << endl;
