@@ -390,6 +390,8 @@ int Worker::listRequest(uint8_t* plaintext){
     LOG("(ListRequest) Sent M3 packet");
 
 
+    incrementCounter();
+    
     return 0;
 
 }
