@@ -9,6 +9,7 @@
 #include "../packet/Logout.h"
 #include "../packet/Result.h"
 #include "../packet/Download.h"
+#include "../packet/Upload.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
@@ -424,6 +425,188 @@ int Client::download(string file_name) {
 // --------------------------------
 
 // ----------- MATTEO -------------
+
+int Client::upload(string file_name) {
+
+    // open the file requested file
+    FileManager file(file_name, READ);
+
+    // TODO: check if the file exists with exception
+    // cerr << "[-] (Upload) The requested file not exists" << endl;
+    // return -1; 
+
+    // check if the file size is zero
+    if (file.getFileSize() == 0) {
+        cerr << "[-] (Upload) An empty file can't be uploaded" << endl;
+        return -2;
+    }
+
+    // check if the file size is over 4G
+    size_t max_size = 4UL * 1024 * 1024 * 1024;
+    if (file.getFileSize() > max_size) {
+        cerr << "[-] (Upload) Is not possible to upload file larger than 4GB" << endl;
+        return -3;
+    }
+
+    // create the M1 packet
+    UploadM1 m1(m_counter, file_name, file.getFileSize());
+    // m1.print();
+    uint8_t* serialized_packet = m1.serialize();
+
+    // create generic packet
+    Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m1.print();
+
+    // 1.) send generic packet      // TODO: fix send valgrind error
+    serialized_packet = generic_m1.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -3;
+    }
+
+    incrementCounter();
+
+    // 2.) receive the result packet
+    serialized_packet = new uint8_t[Generic::getSize(Result::getSize())];
+    res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
+    if (res < 0) {
+        delete[] serialized_packet;
+        return -4;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_m2 = Generic::deserialize(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    // generic_m2.print();
+    bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (Upload) HMAC verification failed" << endl;
+        return -5;
+    }
+
+    // get the M2 packet
+    uint8_t* plaintext = nullptr;
+    int plaintext_size = 0;
+    generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    Result m2 = Result::deserialize(plaintext);
+    // m2.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m2.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (Upload) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    // if the request failed stop
+    if (m2.command_code == REQ_FAILED) {
+        cerr << "[-] (Upload) The file already exists in the cloud" << endl;
+        return -6;
+    }
+
+    size_t chunk_size = file.getChunkSize();
+    size_t sent_size = 0;
+    uint8_t* chunk_buffer = new uint8_t[chunk_size];
+
+    // sent all file chunks
+    for (size_t i = 0; i < file.getNumOfChunks(); ++i) {
+        // get the chunk size
+        if (i == file.getNumOfChunks() - 1)
+            chunk_size = file.getLastChunkSize();
+
+        // read the next chunk
+        file.readChunk(chunk_buffer, chunk_size);
+
+        // create the M3+i packet
+        UploadMi mi(m_counter, chunk_buffer, chunk_size);
+        // mi.print();
+        serialized_packet = mi.serialize();
+
+        // create generic packet
+        Generic generic_mi(m_session_key, m_hmac_key, serialized_packet, UploadMi::getSize(chunk_size));
+        #pragma optimize("", off)
+        memset(serialized_packet, 0, UploadMi::getSize(chunk_size));
+        #pragma optimize("", on)
+        delete[] serialized_packet;
+        // generic_mi.print();
+
+        // 3.) send generic packet
+        serialized_packet = generic_mi.serialize();
+        int res = m_socket->send(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
+        delete[] serialized_packet;
+        if (res < 0) {
+            return -7;      // TODO
+        }
+
+        incrementCounter();
+
+        // print upload status
+        sent_size += chunk_size;
+        cout << "[+] (Upload) Uploaded " << sent_size << "byte/" << file.getFileSize() << "byte" << endl;
+    }
+
+    // clean the buffer
+    #pragma optimize("", off)
+    memset(chunk_buffer, 0, chunk_size);
+    #pragma optimize("", on)
+    delete[] chunk_buffer;
+
+    // 4.) receive the M4 packet
+    serialized_packet = new uint8_t[Generic::getSize(UploadMn::getSize())];
+    res = m_socket->receive(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    if (res < 0) {
+        delete[] serialized_packet;
+        return -8;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_mn = Generic::deserialize(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    delete[] serialized_packet;
+    // generic_mn.print();
+    verification_res = generic_mn.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (Upload) HMAC verification failed" << endl;
+        return -9;
+    }
+
+    // get the Mn packet
+    plaintext = nullptr;
+    plaintext_size = 0;
+    generic_mn.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    UploadMn mn = UploadMn::deserialize(plaintext);
+    // mn.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, UploadMn::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (mn.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (Upload) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    // print the status
+    if (mn.status)
+        cout << "[+] (Upload) Upload completed" << endl;
+    else
+        cerr << "[-] (Upload) Upload failed" << endl;
+
+    return 0;
+}
+
 // --------------------------------
 
 // ---------- GIANLUCA ------------
@@ -527,7 +710,18 @@ int Client::run() {
         }
 
         else if (command == "upload") {
+            // get the file name
+            string file_name;
+            cout << "Insert the name of the file: ";
+            cin >> file_name;
 
+            // sanitize filename
+            if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
+                cerr << "[-] (Run) Not valid file name" << endl;
+                continue;
+            }
+
+            res = upload(file_name);
         }
 
         else if (command == "rename") {

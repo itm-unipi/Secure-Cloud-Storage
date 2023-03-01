@@ -7,6 +7,7 @@
 
 class Worker {
 
+    string m_username;
     bool m_verbose;
     CommunicationSocket* m_socket;
     unsigned char m_session_key[32];
@@ -23,6 +24,7 @@ class Worker {
     // --------------------------------
 
     // ----------- MATTEO -------------
+    int uploadRequest(uint8_t* plaintext);
     // --------------------------------
 
     // ---------- GIANLUCA ------------

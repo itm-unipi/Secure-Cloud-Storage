@@ -7,6 +7,7 @@
 #include "../packet/Logout.h"
 #include "../packet/Result.h"
 #include "../packet/Download.h"
+#include "../packet/Upload.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
 #include "../security/DigitalSignature.h"
@@ -53,8 +54,13 @@ int Worker::loginRequest() {
     if (!bp) {
         m2.result = 0;
     } else {
+<<<<<<< HEAD
         m_username = (string)m1.username;
         user_public_key = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL);
+=======
+        user_public_key = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL);
+        m_username = (string)m1.username;
+>>>>>>> matteo
     }
     BIO_free(bp);
 
@@ -377,6 +383,160 @@ int Worker::downloadRequest(uint8_t* plaintext) {
 // --------------------------------
 
 // ----------- MATTEO -------------
+
+int Worker::uploadRequest(uint8_t* plaintext) {
+
+    // get the M1 packet
+    UploadM1 m1 = UploadM1::deserialize(plaintext);
+    // m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (UploadRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    // TODO: check if the file already exists
+    bool file_exists = false;
+    
+    // create the result fail packet if the file exists, else create the success packet
+    Result m2;
+    if (file_exists)
+        m2 = Result(m_counter, false);
+    else
+        m2 = Result(m_counter, true);
+    // m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, Result::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    LOG("(UploadRequest) Sent file check result packet");
+
+    incrementCounter();
+
+    // stop operation if needed
+    if (file_exists) {
+        cerr << "[-] (UploadRequest) Requested to upload an already existing file" << endl;
+        return -2;
+    }
+
+    // prepare the file reception
+    string file_path = "data/" + m_username + "/" + (string)m1.file_name;
+    FileManager file(file_path, WRITE);
+    file.calulateFileInfo(m1.file_size);
+
+    size_t chunk_size = file.getChunkSize();
+    size_t received_size = 0;
+
+    // receive all file chunks
+    bool upload_failed = false;
+    for (size_t i = 0; i < file.getNumOfChunks(); ++i) {
+        // get the chunk size
+        if (i == file.getNumOfChunks() - 1)
+            chunk_size = file.getLastChunkSize();
+
+        // 3+i.) receive the M3+i packet
+        serialized_packet = new uint8_t[Generic::getSize(UploadMi::getSize(chunk_size))];
+        res = m_socket->receive(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
+        if (res < 0) {
+            delete[] serialized_packet;
+            upload_failed = true;
+            incrementCounter();
+            continue;
+        }
+
+        // deserialize the generic packet and verify the fingerprint
+        Generic generic_mi = Generic::deserialize(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
+        delete[] serialized_packet;
+        // generic_m3.print();
+        bool verification_res = generic_mi.verifyHMAC(m_hmac_key);
+        if (!verification_res) {
+            cerr << "[-] (UploadRequest) HMAC verification failed" << endl;
+            upload_failed = true;
+            incrementCounter();
+            continue;
+        }
+
+        // get the Mi packet
+        uint8_t* plaintext = nullptr;
+        int plaintext_size = 0;
+        generic_mi.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+        UploadMi mi = UploadMi::deserialize(plaintext, chunk_size);
+        // mi.print();
+        #pragma optimize("", off)
+        memset(plaintext, 0, UploadMi::getSize(chunk_size));
+        #pragma optimize("", on)
+        delete[] plaintext;
+
+        // check if the counter is correct
+        if (mi.counter != m_counter) {
+            // TODO: use the goto?
+            cerr << "[-] (UploadRequest) Invalid counter" << endl;
+        }
+
+        incrementCounter();
+
+        // write the received chunk in the file
+        file.writeChunk(mi.chunk, chunk_size);
+
+        // log upload status
+        received_size += chunk_size;
+        LOG("(UploadRequest) Received " << received_size << "byte/" << file.getFileSize() << "byte");
+    }
+
+    // create the Mn packet
+    UploadMn mn(m_counter, !upload_failed);
+    // mn.print();
+    serialized_packet = mn.serialize();
+
+    // create generic packet
+    Generic generic_mn(m_session_key, m_hmac_key, serialized_packet, UploadMn::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, UploadMn::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_mn.print();
+
+    // 4.) send generic packet
+    serialized_packet = generic_mn.serialize();
+    res = m_socket->send(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    LOG("(UploadRequest) Sent result packet");
+
+    incrementCounter();
+
+    if (upload_failed)
+        cerr << "[-] (UploadRequest) Failed to receive file " + file_path << endl;
+    else
+        cout << "[+] (UploadRequest) Upload of file " + file_path + " completed" << endl;
+
+    return 0;
+}
+
 // --------------------------------
 
 // ---------- GIANLUCA ------------
@@ -438,6 +598,10 @@ int Worker::run() {
 
         switch (command_code)
         {
+            case UPLOAD_REQ:
+                uploadRequest(plaintext);
+                break;
+
             case LOGOUT_REQ:
                 logoutRequest(plaintext);
                 return 0;            
