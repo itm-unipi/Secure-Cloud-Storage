@@ -13,7 +13,6 @@ class Worker {
     unsigned char m_session_key[32];
     unsigned char m_hmac_key[32];
     uint32_t m_counter;
-    string m_username;
 
     // protocols
     int loginRequest();

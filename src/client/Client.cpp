@@ -383,8 +383,6 @@ int Client::download(string file_name) {
             cerr << "[-] (Download) HMAC verification failed" << endl;
             return -6;
         }
-
-        LOG("(Download) Received valid chunk packet");
         
         // get the packet content
         uint8_t* plaintext = nullptr;
@@ -409,6 +407,7 @@ int Client::download(string file_name) {
         incrementCounter();
         
         received_bytes += chunk_size;
+        LOG("(Download) Downloaded " << received_bytes << "bytes/" << requested_file.getFileSize() << "bytes");
         new_progress = ceil(((double)received_bytes / requested_file.getFileSize()) * 100);
         if (progress != new_progress) {
             cout << "Downloading..." << new_progress << "%" << endl;
@@ -516,6 +515,7 @@ int Client::upload(string file_name) {
 
     size_t chunk_size = file.getChunkSize();
     size_t sent_size = 0;
+    int progress, new_progress = -1; 
     uint8_t* chunk_buffer = new uint8_t[chunk_size];
 
     // sent all file chunks
@@ -550,9 +550,14 @@ int Client::upload(string file_name) {
 
         incrementCounter();
 
-        // print upload status
+        // log upload status and progress percentage
         sent_size += chunk_size;
-        cout << "[+] (Upload) Uploaded " << sent_size << "byte/" << file.getFileSize() << "byte" << endl;
+        LOG("(Upload) Uploaded " << sent_size << "bytes/" << file.getFileSize() << "bytes");
+        new_progress = ceil(((double)sent_size / file.getFileSize()) * 100);
+        if (progress != new_progress) {
+            cout << "Uploading..." << new_progress << "%" << endl;
+        }
+        progress = new_progress;
     }
 
     // clean the buffer

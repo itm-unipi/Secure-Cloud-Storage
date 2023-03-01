@@ -54,13 +54,8 @@ int Worker::loginRequest() {
     if (!bp) {
         m2.result = 0;
     } else {
-<<<<<<< HEAD
         m_username = (string)m1.username;
         user_public_key = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL);
-=======
-        user_public_key = PEM_read_bio_PUBKEY(bp, NULL, NULL, NULL);
-        m_username = (string)m1.username;
->>>>>>> matteo
     }
     BIO_free(bp);
 
@@ -297,7 +292,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
 
     // deserialize the command packet
     DownloadM1 m1 = DownloadM1::deserialize(plaintext);
-    m1.print();
+    // m1.print();
     #pragma optimize("", off)
     memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
@@ -339,13 +334,13 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     if (!file_found) {
         return -1;
     }
-
+    /*
     cout << "----------------------------------" << endl;
     cout << "FILE SIZE: " << requested_file.getFileSize() << " bytes" << endl;
     cout << "NUM OF CHUNKS: " << requested_file.getNumOfChunks() << endl;
     cout << "LAST CHUNK SIZE: " << requested_file.getLastChunkSize() << " bytes" << endl;
     cout << "----------------------------------" << endl;
-
+    */
     // 2) send file chunks
     uint8_t* buffer = new uint8_t[requested_file.getChunkSize()];
     size_t chunk_size = requested_file.getChunkSize();
@@ -443,7 +438,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     // prepare the file reception
     string file_path = "data/" + m_username + "/" + (string)m1.file_name;
     FileManager file(file_path, WRITE);
-    file.calulateFileInfo(m1.file_size);
+    file.calculateFileInfo(m1.file_size);
 
     size_t chunk_size = file.getChunkSize();
     size_t received_size = 0;
