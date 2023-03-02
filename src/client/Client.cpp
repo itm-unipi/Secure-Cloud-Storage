@@ -7,6 +7,7 @@
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
 #include "../packet/List.h"
+#include "../packet/Rename.h"
 #include "../packet/Result.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
@@ -435,6 +436,109 @@ int Client::list(){
 
     return 0;
 }
+
+int Client::rename(){
+
+    // get input from user
+    string file_name, new_file_name;
+    cout << "Insert file name: ";
+    cin >> file_name;
+    cout << "Insert new file name: ";
+    cin >> new_file_name;
+    
+    // sanitize file_name and new_file_name and password
+    static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-@?!#*.";
+    if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
+        cerr << "[-] (Run) Not valid file_name" << endl;
+        return -1;
+    }
+    if (strspn(new_file_name.c_str(), ok_chars) < strlen(new_file_name.c_str())) { 
+        cerr << "[-] (Run) Not valid new_file_name" << endl;
+        return -1;
+    }
+    if (file_name.length() >= 30) {
+        cerr << "[-] (Run) File name too long" << endl;
+        return -1;
+    } 
+    if (new_file_name.length() >= 30) {
+        cerr << "[-] (Run) New file name too long" << endl;
+        return -1;
+    } 
+
+    // create the M1 packet
+    RenameM1 m1(m_counter, file_name, new_file_name);
+    m1.print();
+    uint8_t* serialized_packet = m1.serialize();
+
+    // create generic packet
+    Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    generic_m1.print();
+
+    // 1.) send generic packet
+    serialized_packet = generic_m1.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -2;
+    }
+
+    incrementCounter();
+
+    LOG("(Rename) Sent M1 packet");
+
+    // 2.) receive the generic packet
+    serialized_packet = new uint8_t[Generic::getSize(Result::getSize())];
+    res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
+    if (res < 0) {
+        // TODO: errore + delete
+        delete[] serialized_packet;
+        return -3;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_m2 = Generic::deserialize(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    generic_m2.print();
+    bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (Rename) HMAC verification failed" << endl;
+        return -4;
+    }
+
+    LOG("(Rename) Received valid M2 packet");
+
+    // get the m2 packet
+    uint8_t* plaintext = nullptr;
+    int plaintext_size = 0;
+    generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    Result m2 = Result::deserialize(plaintext);
+    // m2.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m2.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (Rename) Invalid counter" << endl;
+        return -5;
+    }
+
+    incrementCounter();
+
+    // check if operation failed
+    if (m2.command_code == REQ_SUCCESS)
+        return 0;
+    else if (m2.command_code == REQ_FAILED)
+        return -1;
+
+    return -6;
+}
 // --------------------------------
 
 bool Client::incrementCounter() {
@@ -455,7 +559,7 @@ int Client::run() {
 
     // --------------- INITIALIZATION ---------------
 
-    string username, password;
+    string password;
     cout << "Insert username: ";
     cin >> m_username;
     cout << "Insert password: ";
@@ -515,11 +619,11 @@ int Client::run() {
             res = list();
 
             if (res < 0) {
-                cerr << "[-] (Run) list failed with error code " << res << endl;
+                cerr << "[-] (Run) List failed with error code " << res << endl;
                 return -1;
             } 
 
-            cout << "[+] (Run) list completed" << endl;
+            cout << "[+] (Run) List completed" << endl;
         }
 
         else if (command == "download") {
@@ -531,7 +635,15 @@ int Client::run() {
         }
 
         else if (command == "rename") {
+            res = rename();
 
+            if (res < 0) {
+                cerr << "[-] (Run) Rename failed with error code " << res << endl;
+                if (res < -1)
+                    return -1;
+            }
+            else
+                cout << "[+] (Run) Rename completed" << endl;
         }
 
         else if (command == "delete") {

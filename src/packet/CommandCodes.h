@@ -40,6 +40,9 @@ string printCommandCodeDescription(uint8_t code) {
 
         case FILE_LIST:
             return "FILE_LIST";
+        
+        case RENAME_REQ:
+            return "RENAME_REQ";
 
         case LOGOUT_REQ:
             return "LOGOUT_REQ";

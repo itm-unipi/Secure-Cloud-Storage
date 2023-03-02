@@ -2,12 +2,14 @@
 #include <openssl/evp.h>
 #include <fstream>
 #include <filesystem>
+#include <stdio.h>
 
 #include "Worker.h"
 #include "../packet/Generic.h"
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
 #include "../packet/List.h"
+#include "../packet/Rename.h"
 #include "../packet/Result.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
@@ -407,6 +409,58 @@ int Worker::listRequest(uint8_t* plaintext){
     return 0;
 
 }
+
+int Worker::renameRequest(uint8_t* plaintext){
+    
+    // deserialize the packet
+    RenameM1 m1 = RenameM1::deserialize(plaintext);
+    m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (RenameRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    string file_name = (char*)m1.file_name;
+    string new_file_name = (char*)m1.new_file_name;
+    string path = "data/" + m_username + "/";
+    int res = rename((path + file_name).c_str(), (path + new_file_name).c_str());
+    bool success = (res == 0) ? true : false;
+
+    // create the result packet
+    Result m2(m_counter, success);
+    m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, Result::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    incrementCounter();
+
+    LOG("(RenameRequest) Sent result packet");
+
+    return 0;
+}
 // --------------------------------
 
 
@@ -467,6 +521,9 @@ int Worker::run() {
         {
             case FILE_LIST_REQ:
                 listRequest(plaintext);
+                break;
+             case RENAME_REQ:
+                renameRequest(plaintext);
                 break;
             case LOGOUT_REQ:
                 logoutRequest(plaintext);

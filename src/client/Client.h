@@ -35,6 +35,7 @@ class Client {
     // ---------- GIANLUCA ------------
 
     int list();
+    int rename();
     
     // --------------------------------
 
