@@ -9,8 +9,6 @@
 
 #include "./CommandCodes.h"
 
-#define FILE_NAME_SIZE 30 //TODO valutare se metterlo da un altra parte
-
 using namespace std;
 
 // ------------------------------------ LIST M1 -------------------------------------
@@ -144,18 +142,18 @@ struct ListM3 {
 
     uint8_t command_code;
     uint32_t counter;
-    uint8_t* available_files;          // size = (file_list_size * 30) + (file_list_size - 1)
-    int available_files_size;
+    uint8_t* available_files;          
+    int file_list_size;
 
     ListM3() {}
 
-    ListM3(uint32_t counter, uint8_t* available_files, int available_files_size) {
+    ListM3(uint32_t counter, uint8_t* available_files, int file_list_size) {
 
         this->command_code = FILE_LIST;
         this->counter = counter;
-        this->available_files_size = available_files_size;
-        this->available_files = new uint8_t[available_files_size];
-        memcpy(this->available_files, available_files, available_files_size * sizeof(uint8_t));
+        this->file_list_size = file_list_size;
+        this->available_files = new uint8_t[file_list_size];
+        memcpy(this->available_files, available_files, file_list_size * sizeof(uint8_t));
 
     }
 
@@ -163,7 +161,7 @@ struct ListM3 {
 
     uint8_t* serialize() const {
 
-        int buffer_size = sizeof(uint8_t) + sizeof(uint32_t) + (available_files_size * sizeof(uint8_t));
+        int buffer_size = sizeof(uint8_t) + sizeof(uint32_t) + (file_list_size * sizeof(uint8_t));
         uint8_t* buffer = new uint8_t[buffer_size];
 
         size_t position = 0;
@@ -173,7 +171,7 @@ struct ListM3 {
         memcpy(buffer + position, &counter, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        memcpy(buffer + position, available_files, available_files_size * sizeof(uint8_t));
+        memcpy(buffer + position, available_files, file_list_size * sizeof(uint8_t));
 
         return buffer;
 
@@ -182,7 +180,7 @@ struct ListM3 {
     static ListM3 deserialize(uint8_t* buffer, int buffer_size) {
 
         ListM3 listM3;
-        listM3.available_files_size = buffer_size - (sizeof(uint8_t) + sizeof(uint32_t));
+        listM3.file_list_size = buffer_size - (sizeof(uint8_t) + sizeof(uint32_t));
         
         size_t position = 0;
         memcpy(&listM3.command_code, buffer, sizeof(uint8_t));
@@ -191,19 +189,19 @@ struct ListM3 {
         memcpy(&listM3.counter, buffer + position, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        listM3.available_files = new uint8_t[listM3.available_files_size];
-        memcpy(listM3.available_files, buffer + position, listM3.available_files_size * sizeof(uint8_t));
+        listM3.available_files = new uint8_t[listM3.file_list_size];
+        memcpy(listM3.available_files, buffer + position, listM3.file_list_size * sizeof(uint8_t));
 
         return listM3;
     }
 
-    static int getSize(uint32_t file_list_size) {  // file_list_size = number of files
+    static int getSize(uint32_t file_list_size) {
 
         int size = 0;
         
         size += sizeof(uint8_t);
         size += sizeof(uint32_t);
-        size += ((file_list_size * FILE_NAME_SIZE) + (file_list_size - 1)) * sizeof(uint8_t);
+        size += file_list_size * sizeof(uint8_t);
 
         return size;
     }
@@ -212,7 +210,7 @@ struct ListM3 {
         cout << "--------- LIST M3 ----------" << endl;
         cout << "COMMAND CODE: " << printCommandCodeDescription(command_code) << endl;
         cout << "COUNTER: " << counter << endl;
-        for (int i = 0; i < available_files_size; ++i)
+        for (int i = 0; i < file_list_size; ++i)
             cout << (char)available_files[i];
         cout << endl;
         cout << "------------------------------" << endl;

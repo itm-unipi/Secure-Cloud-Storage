@@ -10,3 +10,5 @@
 ## Gianluca
 
 * vedere se gli errori del logout sono numerati correttamente
+* usare una string invece del vector per concatenare i nomi dei file e '|', usare string.length() per costruire il buffer
+* attenzione ai log del worker: mettere "(ListRequest)" invece che "(List)"
