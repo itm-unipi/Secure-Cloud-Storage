@@ -152,9 +152,12 @@ struct ListM3 {
         this->command_code = FILE_LIST;
         this->counter = counter;
         this->file_list_size = file_list_size;
-        this->available_files = new uint8_t[file_list_size];
-        memcpy(this->available_files, available_files, file_list_size * sizeof(uint8_t));
-
+        if(file_list_size > 0){
+            this->available_files = new uint8_t[file_list_size];
+            memcpy(this->available_files, available_files, file_list_size * sizeof(uint8_t));
+        }
+        else
+            this->available_files = nullptr;
     }
 
     ~ListM3() { delete[] available_files;}
@@ -171,7 +174,8 @@ struct ListM3 {
         memcpy(buffer + position, &counter, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        memcpy(buffer + position, available_files, file_list_size * sizeof(uint8_t));
+        if(file_list_size > 0)
+            memcpy(buffer + position, available_files, file_list_size * sizeof(uint8_t));
 
         return buffer;
 
@@ -189,8 +193,12 @@ struct ListM3 {
         memcpy(&listM3.counter, buffer + position, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        listM3.available_files = new uint8_t[listM3.file_list_size];
-        memcpy(listM3.available_files, buffer + position, listM3.file_list_size * sizeof(uint8_t));
+        if(listM3.file_list_size > 0){
+            listM3.available_files = new uint8_t[listM3.file_list_size];
+            memcpy(listM3.available_files, buffer + position, listM3.file_list_size * sizeof(uint8_t));
+        }
+        else
+            listM3.available_files = nullptr;
 
         return listM3;
     }
@@ -210,9 +218,12 @@ struct ListM3 {
         cout << "--------- LIST M3 ----------" << endl;
         cout << "COMMAND CODE: " << printCommandCodeDescription(command_code) << endl;
         cout << "COUNTER: " << counter << endl;
-        for (int i = 0; i < file_list_size; ++i)
-            cout << (char)available_files[i];
-        cout << endl;
+        cout << "AVAILABLE FILES: " << endl;
+        if(file_list_size > 0){
+            for (int i = 0; i < file_list_size; ++i)
+                cout << (char)available_files[i];
+            cout << endl;
+        }
         cout << "------------------------------" << endl;
     }
 };

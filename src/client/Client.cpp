@@ -295,7 +295,7 @@ int Client::list(){
 
     // create the M1 packet
     ListM1 m1(m_counter);
-    // m1.print();
+    m1.print();
     uint8_t* serialized_packet = m1.serialize();
 
     // create generic packet
@@ -304,7 +304,7 @@ int Client::list(){
     memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
     delete[] serialized_packet;
-    // generic_m1.print();
+    generic_m1.print();
 
     // 1.) send generic packet
     serialized_packet = generic_m1.serialize();
@@ -330,7 +330,7 @@ int Client::list(){
     // deserialize the generic packet and verify the fingerprint
     Generic generic_m2 = Generic::deserialize(serialized_packet, Generic::getSize(ListM2::getSize()));
     delete[] serialized_packet;
-    // generic_m2.print();
+    generic_m2.print();
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
         cerr << "[-] (List) HMAC verification failed" << endl;
@@ -345,7 +345,7 @@ int Client::list(){
     uint8_t command_code = generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     // check if the command code is correct
     if (command_code != FILE_LIST_SIZE){
-        cerr << " [-] (List) Unexpeted packet" << endl;
+        cerr << " [-] (List) Unexpected packet" << endl;
         #pragma optimize("", off)
         memset(plaintext, 0, ListM2::getSize());
         #pragma optimize("", on)
@@ -353,7 +353,7 @@ int Client::list(){
         return -4;
     }
     ListM2 m2 = ListM2::deserialize(plaintext);
-    // m2.print();
+    m2.print();
 
     #pragma optimize("", off)
     memset(plaintext, 0, ListM2::getSize());
@@ -381,7 +381,7 @@ int Client::list(){
     // deserialize the generic packet and verify the fingerprint
     Generic generic_m3 = Generic::deserialize(serialized_packet, Generic::getSize(ListM3::getSize(m2.file_list_size)));
     delete[] serialized_packet;
-    // generic_m3.print();
+    generic_m3.print();
     verification_res = generic_m3.verifyHMAC(m_hmac_key);
     if (!verification_res) {
         cerr << "[-] (List) HMAC verification failed" << endl;
@@ -396,7 +396,7 @@ int Client::list(){
     command_code = generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     // check if the command code is correct
     if (command_code != FILE_LIST){
-        cerr << " [-] (List) Unexpeted packet" << endl;
+        cerr << " [-] (List) Unexpected packet" << endl;
         #pragma optimize("", off)
         memset(plaintext, 0, ListM3::getSize(m2.file_list_size));
         #pragma optimize("", on)
@@ -404,7 +404,7 @@ int Client::list(){
         return -8;
     }
     ListM3 m3 = ListM3::deserialize(plaintext, plaintext_size);
-    // m3.print();
+    m3.print();
 
     #pragma optimize("", off)
     memset(plaintext, 0, ListM3::getSize(m2.file_list_size));
@@ -421,7 +421,7 @@ int Client::list(){
     incrementCounter();
 
     //print file list
-    cout << "---------- LIST -------------" << endl;
+    cout << "----------- LIST -------------" << endl;
     string file_name = "";
     for(int i = 0; i < (int)m2.file_list_size; i++){
         if ((char)m3.available_files[i] == '|' || i == (int)m2.file_list_size - 1){

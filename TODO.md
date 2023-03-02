@@ -10,5 +10,5 @@
 ## Gianluca
 
 * vedere se gli errori del logout sono numerati correttamente
-* usare una string invece del vector per concatenare i nomi dei file e '|', usare string.length() per costruire il buffer
-* attenzione ai log del worker: mettere "(ListRequest)" invece che "(List)"
+* valutare se mettere il controllo del command_code, command_code sbagliato non puo avvenire se non a causa di un reply attack, in generale se ne accorgerebbe l'errore del counter ma tale errore verrebbe scoperto solo dopo
+la deserializzazione del pacchetto che potrebbe fallire se il command_code è diverso

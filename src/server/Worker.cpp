@@ -299,7 +299,7 @@ int Worker::listRequest(uint8_t* plaintext){
 
     // deserialize the packet
     ListM1 m1 = ListM1::deserialize(plaintext);
-    // m1.print();
+    m1.print();
     #pragma optimize("", off)
     memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
@@ -332,24 +332,29 @@ int Worker::listRequest(uint8_t* plaintext){
             }
         }
         
-        files.replace(files.length() - 1, 1, "");
+        if(files.length() > 0)
+            files.replace(files.length() - 1, 1, "");
     }
     else{
         cerr << "[-] Invalid Directory" << endl;
         return -2;
     }
 
-    uint32_t file_list_size = files.length() + 1;
-
+    uint32_t file_list_size = 0;
     uint8_t* available_files = nullptr;
-    available_files = new uint8_t[file_list_size];
-    memcpy(available_files, files.c_str(), file_list_size);
+
+    if(files.length() > 0){
+
+        file_list_size = files.length() + 1;
+        available_files = new uint8_t[file_list_size];
+        memcpy(available_files, files.c_str(), file_list_size);
+    }
 
     LOG("(ListRequest) got file names of the user");
 
     // create the m2 packet
     ListM2 m2(m_counter, file_list_size);
-    // m2.print();
+    m2.print();
     uint8_t* serialized_packet = m2.serialize();
 
     // create generic packet
@@ -358,7 +363,7 @@ int Worker::listRequest(uint8_t* plaintext){
     memset(serialized_packet, 0, ListM2::getSize());
     #pragma optimize("", on)
     delete[] serialized_packet;
-    // generic_m2.print();
+    generic_m2.print();
 
     // 2.) send generic packet
     serialized_packet = generic_m2.serialize();
@@ -375,7 +380,7 @@ int Worker::listRequest(uint8_t* plaintext){
     // create the m3 packet
     ListM3 m3(m_counter, available_files, file_list_size);
     delete[] available_files;
-    // m3.print();
+    m3.print();
     serialized_packet = m3.serialize();
 
     // create generic packet
@@ -384,7 +389,7 @@ int Worker::listRequest(uint8_t* plaintext){
     memset(serialized_packet, 0, ListM3::getSize(file_list_size));
     #pragma optimize("", on)
     delete[] serialized_packet;
-    // generic_m3.print();
+    generic_m3.print();
 
     // 2.) send generic packet
     serialized_packet = generic_m3.serialize();
