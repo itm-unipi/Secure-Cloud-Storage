@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <exception>
 #include "FileManager.h"
 
 FileManager::FileManager(std::string filename, uint8_t open_type) {
@@ -14,9 +15,9 @@ FileManager::FileManager(std::string filename, uint8_t open_type) {
         m_outdata.open(filename, std::ios::binary);
 
     // check if the open failed
-    if ((open_type == READ && !m_indata.good()) || (open_type == WRITE && !m_outdata.good())) {
-        cerr << "[-] (FileManager) Failed to open file" << endl;
-        return;
+    if (open_type == READ && !m_indata.is_open()) {
+        cerr << "[-] (FileManager) File " << filename << " not exists" << endl;
+        throw -1;
     }
 
     // get the information if is in read mode

@@ -1,3 +1,4 @@
+#include <exception>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
 
@@ -308,10 +309,16 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     // check if the requested file exists in the user storage
     string file_path = "data/" + m_username + "/" + string(m1.file_name);
     LOG("(DownloadRequest) Searching for " + file_path);
-    FileManager requested_file(file_path, READ);
+    bool file_found = true;
+    size_t file_size = 0;
+    try {
+        FileManager exists_test(file_path, READ);
+        file_size = exists_test.getFileSize();
+    } catch (int e) {
+        file_found = false;
+    }
 
-    bool file_found = true; // TEST
-    DownloadM2 m2(m_counter, file_found, requested_file.getFileSize());
+    DownloadM2 m2(m_counter, file_found, file_size);
     uint8_t* serialized_packet = m2.serialize();
 
     Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, DownloadM2::getSize());
@@ -334,6 +341,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     if (!file_found) {
         return -1;
     }
+    
     /*
     cout << "----------------------------------" << endl;
     cout << "FILE SIZE: " << requested_file.getFileSize() << " bytes" << endl;
@@ -341,7 +349,9 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     cout << "LAST CHUNK SIZE: " << requested_file.getLastChunkSize() << " bytes" << endl;
     cout << "----------------------------------" << endl;
     */
+
     // 2) send file chunks
+    FileManager requested_file(file_path, READ);
     uint8_t* buffer = new uint8_t[requested_file.getChunkSize()];
     size_t chunk_size = requested_file.getChunkSize();
     for (size_t i = 0; i < requested_file.getNumOfChunks(); i++) {
@@ -397,8 +407,14 @@ int Worker::uploadRequest(uint8_t* plaintext) {
 
     incrementCounter();
 
-    // TODO: check if the file already exists
-    bool file_exists = false;
+    // check if the file already exists
+    bool file_exists = true;
+    string file_path = "data/" + m_username + "/" + (string)m1.file_name;
+    try {
+        FileManager exists_test(file_path, READ);
+    } catch (int e) {
+        file_exists = false;
+    }
     
     // create the result fail packet if the file exists, else create the success packet
     Result m2;
@@ -436,7 +452,6 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     }
 
     // prepare the file reception
-    string file_path = "data/" + m_username + "/" + (string)m1.file_name;
     FileManager file(file_path, WRITE);
     file.calculateFileInfo(m1.file_size);
 

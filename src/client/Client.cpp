@@ -427,12 +427,16 @@ int Client::download(string file_name) {
 
 int Client::upload(string file_name) {
 
+    // check if the file exists
+    try {
+        FileManager exists_test(file_name, READ);
+    } catch (int e) {
+        cerr << "[-] (Upload) The requested file not exists in local filesystem" << endl;
+        return -1; 
+    }
+
     // open the file requested file
     FileManager file(file_name, READ);
-
-    // TODO: check if the file exists with exception
-    // cerr << "[-] (Upload) The requested file not exists" << endl;
-    // return -1; 
 
     // check if the file size is zero
     if (file.getFileSize() == 0) {
@@ -460,7 +464,7 @@ int Client::upload(string file_name) {
     delete[] serialized_packet;
     // generic_m1.print();
 
-    // 1.) send generic packet      // TODO: fix send valgrind error
+    // 1.) send generic packet
     serialized_packet = generic_m1.serialize();
     int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
     delete[] serialized_packet;
