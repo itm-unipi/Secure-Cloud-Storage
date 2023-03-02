@@ -18,7 +18,6 @@ struct ListM1 {
     uint8_t command_code;
     uint32_t counter;
 
-
     ListM1() {}
 
     ListM1(uint32_t counter) {

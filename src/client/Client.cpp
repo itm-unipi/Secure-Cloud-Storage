@@ -41,6 +41,8 @@ Client::~Client() {
     #pragma optimize("", on)
 }
 
+// ------------------------------------------------------------------------------
+
 int Client::login() {
 
     // generate the ephemeral key (that contains private and public keys)
@@ -217,6 +219,8 @@ int Client::login() {
     return 0;
 }
 
+// ------------------------------------------------------------------------------
+
 int Client::logout() {
 
     // create the M1 packet
@@ -289,7 +293,8 @@ int Client::logout() {
     return -2;
 }
 
-// ----------- BIAGIO -------------
+// ------------------------------------------------------------------------------
+
 int Client::download(string file_name) {
 
     // 1) send command packet along with the file_name to download
@@ -424,16 +429,13 @@ int Client::download(string file_name) {
 
     return 0;
 }
-// --------------------------------
 
-// ----------- MATTEO -------------
+// ------------------------------------------------------------------------------
 
 int Client::upload(string file_name) {
 
     // check if the file exists
-    try {
-        FileManager exists_test(file_name, READ);
-    } catch (int e) {
+    if (!FileManager::exists(file_name)) {
         cerr << "[-] (Upload) The requested file not exists in local filesystem" << endl;
         return -1; 
     }
@@ -522,7 +524,7 @@ int Client::upload(string file_name) {
 
     size_t chunk_size = file.getChunkSize();
     size_t sent_size = 0;
-    int progress, new_progress = -1; 
+    int progress = -1, new_progress;
     uint8_t* chunk_buffer = new uint8_t[chunk_size];
 
     // sent all file chunks
@@ -619,11 +621,9 @@ int Client::upload(string file_name) {
     return 0;
 }
 
-// --------------------------------
+// ------------------------------------------------------------------------------
 
-// ---------- GIANLUCA ------------
-
-int Client::list(){
+int Client::list() {
 
     // create the M1 packet
     ListM1 m1(m_counter);
@@ -768,7 +768,9 @@ int Client::list(){
     return 0;
 }
 
-int Client::rename(){
+// ------------------------------------------------------------------------------
+
+int Client::rename() {
 
     // get input from user
     string file_name, new_file_name;
@@ -887,7 +889,9 @@ int Client::rename(){
     return -6;
 }
 
-int Client::remove(){
+// ------------------------------------------------------------------------------
+
+int Client::remove() {
 
     // get input from user
     string file_name;
@@ -979,7 +983,7 @@ int Client::remove(){
             case FILE_NOT_FOUND_ERROR:
                 cerr << "[-] (Remove) File not found" << endl;
                 break;
-            case REMOVE_FAILED_ERROR:
+            case DELETE_FAILED_ERROR:
                 cerr << "[-] (Remove) Remove operation failed" << endl;
                 break;
         }
@@ -988,7 +992,8 @@ int Client::remove(){
 
     return -6;
 }
-// --------------------------------
+
+// ------------------------------------------------------------------------------
 
 bool Client::incrementCounter() {
 
@@ -1126,7 +1131,7 @@ int Client::run() {
                 cout << "[+] (Run) Rename completed" << endl;
         }
 
-        else if (command == "remove") {
+        else if (command == "delete") {
             res = remove();
             if (res < 0) {
                 if (res < -1){
@@ -1158,7 +1163,7 @@ int Client::run() {
             cout << "download:" << endl;
             cout << "upload:" << endl;
             cout << "rename:" << endl;
-            cout << "remove:" << endl;
+            cout << "delete:" << endl;
             cout << "logout:" << endl;
             cout << "exit:" << endl;
             cout << "--------------------------------" << endl;

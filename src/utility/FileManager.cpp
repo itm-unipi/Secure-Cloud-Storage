@@ -76,3 +76,14 @@ void FileManager::calculateFileInfo(size_t size) {
     m_num_of_chunks = ceil((double)m_file_size / (double)m_chunk_size);
     m_last_chunk_size = m_file_size % m_chunk_size != 0 ? m_file_size - ((m_num_of_chunks - 1) * m_chunk_size) : m_chunk_size;
 }
+
+bool FileManager::exists(string file_name) {
+
+    // try to open the file
+    ifstream indata;
+    indata.open(file_name, std::ios::binary);
+
+    if (!indata.is_open())
+        return false;
+    return true;
+}

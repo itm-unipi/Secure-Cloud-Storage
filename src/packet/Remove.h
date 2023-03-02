@@ -16,19 +16,19 @@ struct RemoveM1 {
 
     uint8_t command_code;
     uint32_t counter;
-    uint8_t file_name[FILE_NAME_SIZE];
+    char file_name[FILE_NAME_SIZE];
 
     RemoveM1() {}
 
     RemoveM1(uint32_t counter, string file_name) {
-        this->command_code = REMOVE_REQ;
+        this->command_code = DELETE_REQ;
         this->counter = counter;
-        memcpy(&this->file_name, file_name.c_str(), FILE_NAME_SIZE);
+        strncpy(this->file_name, file_name.c_str(), FILE_NAME_SIZE);
     }
 
     uint8_t* serialize() const {
 
-        uint8_t* buffer = new uint8_t[RemoveM1::getSize()];
+        uint8_t* buffer = new uint8_t[COMMAND_FIELD_PACKET_SIZE];
 
         size_t position = 0;
         memcpy(buffer, &command_code, sizeof(uint8_t));
@@ -37,7 +37,11 @@ struct RemoveM1 {
         memcpy(buffer + position, &counter, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        memcpy(buffer + position, &file_name, FILE_NAME_SIZE * sizeof(uint8_t));
+        memcpy(buffer + position, &file_name, FILE_NAME_SIZE * sizeof(char));
+        position += FILE_NAME_SIZE * sizeof(char);
+
+        // add random bytes
+        RAND_bytes(buffer + position, COMMAND_FIELD_PACKET_SIZE - position);
     
         return buffer;
     }
@@ -53,7 +57,7 @@ struct RemoveM1 {
         memcpy(&removeM1.counter, buffer + position, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        memcpy(&removeM1.file_name, buffer + position, FILE_NAME_SIZE * sizeof(uint8_t));
+        memcpy(&removeM1.file_name, buffer + position, FILE_NAME_SIZE * sizeof(char));
        
         return removeM1;
     }
@@ -64,7 +68,7 @@ struct RemoveM1 {
 
         size += sizeof(uint8_t);
         size += sizeof(uint32_t);
-        size += FILE_NAME_SIZE * sizeof(uint8_t);
+        size += FILE_NAME_SIZE * sizeof(char);
 
         return size;
     }
@@ -74,7 +78,7 @@ struct RemoveM1 {
         cout << "--------- REMOVE M1 ----------" << endl;
         cout << "COMMAND CODE: " << printCommandCodeDescription(command_code) << endl;
         cout << "COUNTER: " << counter << endl;
-        cout << "FILE NAME: " << (char*)file_name << endl;
+        cout << "FILE NAME: " << file_name << endl;
         cout << "------------------------------" << endl;
     }
 };

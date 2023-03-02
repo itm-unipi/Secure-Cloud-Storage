@@ -25,22 +25,11 @@ class Client {
 
     int login();
     int logout();
-
-    // ----------- BIAGIO -------------
     int download(string file_name);
-    // --------------------------------
-
-    // ----------- MATTEO -------------
     int upload(string file_name);
-    // --------------------------------
-
-    // ---------- GIANLUCA ------------
-
     int list();
     int rename();
     int remove();
-    
-    // --------------------------------
 
     bool incrementCounter();
 

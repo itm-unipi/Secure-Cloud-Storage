@@ -34,6 +34,8 @@ Worker::~Worker() {
     cout << "[+] (Server) Worker closed" << endl;
 }
 
+// ------------------------------------------------------------------------------
+
 int Worker::loginRequest() {
 
     // 1.) receive ephemeral key and username
@@ -242,6 +244,8 @@ int Worker::loginRequest() {
     return 0;
 }
 
+// ------------------------------------------------------------------------------
+
 int Worker::logoutRequest(uint8_t* plaintext) {
 
     // deserialize the packet
@@ -294,7 +298,8 @@ int Worker::logoutRequest(uint8_t* plaintext) {
     return 0;
 }
 
-// ----------- BIAGIO -------------
+// ------------------------------------------------------------------------------
+
 int Worker::downloadRequest(uint8_t* plaintext) {
 
     // deserialize the command packet
@@ -315,13 +320,12 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     // check if the requested file exists in the user storage
     string file_path = "data/" + m_username + "/" + string(m1.file_name);
     LOG("(DownloadRequest) Searching for " + file_path);
-    bool file_found = true;
+    bool file_found = FileManager::exists(file_path);
     size_t file_size = 0;
-    try {
-        FileManager exists_test(file_path, READ);
-        file_size = exists_test.getFileSize();
-    } catch (int e) {
-        file_found = false;
+    FileManager* requested_file = nullptr;
+    if (file_found) {
+        requested_file = new FileManager(file_path, READ);
+        file_size = requested_file->getFileSize();
     }
 
     DownloadM2 m2(m_counter, file_found, file_size);
@@ -338,6 +342,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     int res = m_socket->send(serialized_packet, Generic::getSize(DownloadM2::getSize()));
     delete[] serialized_packet;
     if (res < 0) {
+        delete requested_file;
         return -1;
     }
 
@@ -345,27 +350,27 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     incrementCounter();
 
     if (!file_found) {
+        delete requested_file;
         return -1;
     }
     
     /*
     cout << "----------------------------------" << endl;
-    cout << "FILE SIZE: " << requested_file.getFileSize() << " bytes" << endl;
-    cout << "NUM OF CHUNKS: " << requested_file.getNumOfChunks() << endl;
-    cout << "LAST CHUNK SIZE: " << requested_file.getLastChunkSize() << " bytes" << endl;
+    cout << "FILE SIZE: " << requested_file->getFileSize() << " bytes" << endl;
+    cout << "NUM OF CHUNKS: " << requested_file->getNumOfChunks() << endl;
+    cout << "LAST CHUNK SIZE: " << requested_file->getLastChunkSize() << " bytes" << endl;
     cout << "----------------------------------" << endl;
     */
 
     // 2) send file chunks
-    FileManager requested_file(file_path, READ);
-    uint8_t* buffer = new uint8_t[requested_file.getChunkSize()];
-    size_t chunk_size = requested_file.getChunkSize();
-    for (size_t i = 0; i < requested_file.getNumOfChunks(); i++) {
+    uint8_t* buffer = new uint8_t[requested_file->getChunkSize()];
+    size_t chunk_size = requested_file->getChunkSize();
+    for (size_t i = 0; i < requested_file->getNumOfChunks(); i++) {
 
-        if (i == requested_file.getNumOfChunks() - 1)
-            chunk_size = requested_file.getLastChunkSize();
+        if (i == requested_file->getNumOfChunks() - 1)
+            chunk_size = requested_file->getLastChunkSize();
 
-        requested_file.readChunk(buffer, chunk_size * sizeof(uint8_t));
+        requested_file->readChunk(buffer, chunk_size * sizeof(uint8_t));
         DownloadMi mi(m_counter, buffer, chunk_size);
         // mi.print(chunk_size);
         serialized_packet = mi.serialize(chunk_size);
@@ -380,6 +385,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
         int res = m_socket->send(serialized_packet, Generic::getSize(DownloadMi::getSize(chunk_size)));
         delete[] serialized_packet;
         if (res < 0) {
+            delete requested_file;
             return -1;
         }
 
@@ -388,12 +394,12 @@ int Worker::downloadRequest(uint8_t* plaintext) {
 
     LOG("(DownloadRequest) File transfer completed");
     delete[] buffer;
+    delete requested_file;
 
     return 0;
 }
-// --------------------------------
 
-// ----------- MATTEO -------------
+// ------------------------------------------------------------------------------
 
 int Worker::uploadRequest(uint8_t* plaintext) {
 
@@ -414,13 +420,8 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     incrementCounter();
 
     // check if the file already exists
-    bool file_exists = true;
     string file_path = "data/" + m_username + "/" + (string)m1.file_name;
-    try {
-        FileManager exists_test(file_path, READ);
-    } catch (int e) {
-        file_exists = false;
-    }
+    bool file_exists = FileManager::exists(file_path);
     
     // create the result fail packet if the file exists, else create the success packet
     Result m2;
@@ -553,11 +554,9 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     return 0;
 }
 
-// --------------------------------
+// ------------------------------------------------------------------------------
 
-// ---------- GIANLUCA ------------
-
-int Worker::listRequest(uint8_t* plaintext){
+int Worker::listRequest(uint8_t* plaintext) {
 
     // deserialize the packet
     ListM1 m1 = ListM1::deserialize(plaintext);
@@ -594,10 +593,9 @@ int Worker::listRequest(uint8_t* plaintext){
             }
         }
         
-        if(files.length() > 0)
+        if (files.length() > 0)
             files.replace(files.length() - 1, 1, "");
-    }
-    else{
+    } else {
         cerr << "[-] Invalid Directory" << endl;
         return -2;
     }
@@ -605,7 +603,7 @@ int Worker::listRequest(uint8_t* plaintext){
     uint32_t file_list_size = 0;
     uint8_t* available_files = nullptr;
 
-    if(files.length() > 0){
+    if (files.length() > 0) {
 
         file_list_size = files.length() + 1;
         available_files = new uint8_t[file_list_size];
@@ -663,14 +661,14 @@ int Worker::listRequest(uint8_t* plaintext){
 
     LOG("(ListRequest) Sent M3 packet");
 
-
     incrementCounter();
     
     return 0;
-
 }
 
-int Worker::renameRequest(uint8_t* plaintext){
+// ------------------------------------------------------------------------------
+
+int Worker::renameRequest(uint8_t* plaintext) {
     
     // deserialize the packet
     RenameM1 m1 = RenameM1::deserialize(plaintext);
@@ -696,26 +694,21 @@ int Worker::renameRequest(uint8_t* plaintext){
     int res;
 
     // check if the file with file_name exists
-    FILE* fp = fopen((path + file_name).c_str(), "r");
-    if(!fp){
+    if (!FileManager::exists(path + file_name)) {
         success = false;
         error_code = FILE_NOT_FOUND_ERROR;
     }
-    else
-        fclose(fp);
 
     // check if a file with new_file_name already exists
-    if(success){
-        fp = fopen((path + new_file_name).c_str(), "r");
-        if(fp){
+    if (success) { 
+        if (FileManager::exists(path + new_file_name)) {
             success = false;
             error_code = FILE_ALREADY_EXISTS_ERROR;
-            fclose(fp);
         }
     }
 
     // rename the file
-    if(success){
+    if (success) {
         res = rename((path + file_name).c_str(), (path + new_file_name).c_str());
         success = (res == 0) ? true : false;
         error_code = (res == 0) ? NO_ERROR : RENAME_FAILED_ERROR;
@@ -749,7 +742,9 @@ int Worker::renameRequest(uint8_t* plaintext){
     return 0;
 }
 
-int Worker::removeRequest(uint8_t* plaintext){
+// ------------------------------------------------------------------------------
+
+int Worker::removeRequest(uint8_t* plaintext) {
 
     // deserialize the packet
     RemoveM1 m1 = RemoveM1::deserialize(plaintext);
@@ -774,16 +769,13 @@ int Worker::removeRequest(uint8_t* plaintext){
     int res;
 
     // check if the file with file_name exists
-    FILE* fp = fopen((path + file_name).c_str(), "r");
-    if(!fp){
+    if (!FileManager::exists(path + file_name)) {
         success = false;
         error_code = FILE_NOT_FOUND_ERROR;
     }
-    else
-        fclose(fp);
 
     // remove the file
-    if(success){
+    if (success) {
         res = remove((path + file_name).c_str());
         success = (res == 0) ? true : false;
         error_code = (res == 0) ? NO_ERROR : RENAME_FAILED_ERROR;
@@ -816,8 +808,8 @@ int Worker::removeRequest(uint8_t* plaintext){
 
     return 0;
 }
-// --------------------------------
 
+// ------------------------------------------------------------------------------
 
 bool Worker::incrementCounter() {
 
@@ -882,7 +874,7 @@ int Worker::run() {
                 downloadRequest(plaintext);
                 break;
             
-            case REMOVE_REQ:
+            case DELETE_REQ:
                 removeRequest(plaintext);
                 break;
                 

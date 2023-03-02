@@ -17,22 +17,11 @@ class Worker {
     // protocols
     int loginRequest();
     int logoutRequest(uint8_t* plaintext);
-
-    // ----------- BIAGIO -------------
     int downloadRequest(uint8_t* plaintext);
-    // --------------------------------
-
-    // ----------- MATTEO -------------
     int uploadRequest(uint8_t* plaintext);
-    // --------------------------------
-
-    // ---------- GIANLUCA ------------
-
     int listRequest(uint8_t* plaintext);
     int renameRequest(uint8_t* plaintext);
     int removeRequest(uint8_t* plaintext);
-
-    // --------------------------------
 
     bool incrementCounter();
 

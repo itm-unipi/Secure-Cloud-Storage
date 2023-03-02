@@ -31,6 +31,8 @@ public:
     size_t getNumOfChunks() { return m_num_of_chunks; }
     
     void calculateFileInfo(size_t size);
+
+    static bool exists(string file_name);
 };
 
 #endif  // _FILEMANAGER_H
