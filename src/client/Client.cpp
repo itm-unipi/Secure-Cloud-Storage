@@ -8,6 +8,7 @@
 #include "../packet/Logout.h"
 #include "../packet/List.h"
 #include "../packet/Rename.h"
+#include "../packet/Remove.h"
 #include "../packet/Result.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
@@ -446,7 +447,7 @@ int Client::rename(){
     cout << "Insert new file name: ";
     cin >> new_file_name;
     
-    // sanitize file_name and new_file_name and password
+    // sanitize file_name and new_file_name
     static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-@?!#*.";
     if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
         cerr << "[-] (Rename) Not valid file_name" << endl;
@@ -555,6 +556,108 @@ int Client::rename(){
 
     return -6;
 }
+
+int Client::remove(){
+
+    // get input from user
+    string file_name;
+    cout << "Insert file name: ";
+    cin >> file_name;
+    
+    // sanitize file_name
+    static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-@?!#*.";
+    if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
+        cerr << "[-] (Remove) Not valid file_name" << endl;
+        return -1;
+    }
+    if (file_name.length() >= 30) {
+        cerr << "[-] (Remove) File name too long" << endl;
+        return -1;
+    } 
+
+    // create the M1 packet
+    RemoveM1 m1(m_counter, file_name);
+    // m1.print();
+    uint8_t* serialized_packet = m1.serialize();
+
+    // create generic packet
+    Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m1.print();
+
+    // 1.) send generic packet
+    serialized_packet = generic_m1.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -2;
+    }
+
+    incrementCounter();
+
+    LOG("(Remove) Sent M1 packet");
+
+    // 2.) receive the generic packet
+    serialized_packet = new uint8_t[Generic::getSize(Result::getSize())];
+    res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
+    if (res < 0) {
+        // TODO: errore + delete
+        delete[] serialized_packet;
+        return -3;
+    }
+
+    // deserialize the generic packet and verify the fingerprint
+    Generic generic_m2 = Generic::deserialize(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    // generic_m2.print();
+    bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
+    if (!verification_res) {
+        cerr << "[-] (Remove) HMAC verification failed" << endl;
+        return -4;
+    }
+
+    LOG("(Remove) Received valid M2 packet");
+
+    // get the m2 packet
+    uint8_t* plaintext = nullptr;
+    int plaintext_size = 0;
+    generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
+    Result m2 = Result::deserialize(plaintext);
+    // m2.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m2.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (Remove) Invalid counter" << endl;
+        return -5;
+    }
+
+    incrementCounter();
+
+    // check if operation failed
+    if (m2.command_code == REQ_SUCCESS)
+        return 0;
+    else if (m2.command_code == REQ_FAILED){
+        switch(m2.error_code){
+            case FILE_NOT_FOUND_ERROR:
+                cerr << "[-] (Remove) File not found" << endl;
+                break;
+            case REMOVE_FAILED_ERROR:
+                cerr << "[-] (Remove) Remove operation failed" << endl;
+                break;
+        }
+        return -1;
+    }
+
+    return -6;
+}
 // --------------------------------
 
 bool Client::incrementCounter() {
@@ -633,7 +736,6 @@ int Client::run() {
 
         if (command == "list") {
             res = list();
-
             if (res < 0) {
                 cerr << "[-] (Run) List failed with error code " << res << endl;
                 return -1;
@@ -652,7 +754,6 @@ int Client::run() {
 
         else if (command == "rename") {
             res = rename();
-
             if (res < 0) {
                 if (res < -1){
                     cerr << "[-] (Run) Rename failed with error code " << res << endl;
@@ -663,8 +764,16 @@ int Client::run() {
                 cout << "[+] (Run) Rename completed" << endl;
         }
 
-        else if (command == "delete") {
-
+        else if (command == "remove") {
+            res = remove();
+            if (res < 0) {
+                if (res < -1){
+                    cerr << "[-] (Run) Remove failed with error code " << res << endl;
+                    return -1;
+                }
+            }
+            else
+                cout << "[+] (Run) Remove completed" << endl;
         }
 
         else if (command == "logout" || command == "exit") {
@@ -687,7 +796,7 @@ int Client::run() {
             cout << "download:" << endl;
             cout << "upload:" << endl;
             cout << "rename:" << endl;
-            cout << "delete:" << endl;
+            cout << "remove:" << endl;
             cout << "logout:" << endl;
             cout << "exit:" << endl;
             cout << "--------------------------------" << endl;

@@ -36,6 +36,7 @@ class Client {
 
     int list();
     int rename();
+    int remove();
     
     // --------------------------------
 

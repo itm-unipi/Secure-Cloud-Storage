@@ -28,6 +28,7 @@ class Worker {
     string m_username; 
     int listRequest(uint8_t* plaintext);
     int renameRequest(uint8_t* plaintext);
+    int removeRequest(uint8_t* plaintext);
 
     // --------------------------------
 

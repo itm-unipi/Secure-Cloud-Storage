@@ -10,6 +10,7 @@
 #include "../packet/Logout.h"
 #include "../packet/List.h"
 #include "../packet/Rename.h"
+#include "../packet/Remove.h"
 #include "../packet/Result.h"
 #include "../security/DiffieHellman.h"
 #include "../security/Sha512.h"
@@ -488,6 +489,74 @@ int Worker::renameRequest(uint8_t* plaintext){
 
     return 0;
 }
+
+int Worker::removeRequest(uint8_t* plaintext){
+
+    // deserialize the packet
+    RemoveM1 m1 = RemoveM1::deserialize(plaintext);
+    // m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (RemoveRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    string file_name = (char*)m1.file_name;
+    string path = "data/" + m_username + "/";
+    bool success = true;
+    uint8_t error_code = NO_ERROR;
+    int res;
+
+    // check if the file with file_name exists
+    FILE* fp = fopen((path + file_name).c_str(), "r");
+    if(!fp){
+        success = false;
+        error_code = FILE_NOT_FOUND_ERROR;
+    }
+    else
+        fclose(fp);
+
+    // remove the file
+    if(success){
+        res = remove((path + file_name).c_str());
+        success = (res == 0) ? true : false;
+        error_code = (res == 0) ? NO_ERROR : RENAME_FAILED_ERROR;
+    }
+
+    // create the result packet
+    Result m2(m_counter, success, error_code);
+    // m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, Result::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    incrementCounter();
+
+    LOG("(RemoveRequest) Sent result packet");
+
+    return 0;
+}
 // --------------------------------
 
 
@@ -550,8 +619,12 @@ int Worker::run() {
                 listRequest(plaintext);
                 break;
 
-             case RENAME_REQ:
+            case RENAME_REQ:
                 renameRequest(plaintext);
+                break;
+            
+            case REMOVE_REQ:
+                removeRequest(plaintext);
                 break;
 
             case LOGOUT_REQ:

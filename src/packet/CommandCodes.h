@@ -13,7 +13,7 @@ using namespace std;
 #define DOWNLOAD_REQ    5
 #define FILE_FOUND      6
 #define FILE_NOT_FOUND  7
-#define DELETE_REQ      8
+#define REMOVE_REQ      8
 #define FILE_LIST_REQ   9
 #define FILE_LIST_SIZE  10
 #define FILE_LIST       11
@@ -25,8 +25,10 @@ using namespace std;
 #define FILE_NOT_FOUND_ERROR      1
 #define FILE_ALREADY_EXISTS_ERROR 2
 #define RENAME_FAILED_ERROR       3
+#define REMOVE_FAILED_ERROR       4
 
 #define COMMAND_FIELD_PACKET_SIZE 65 * sizeof(uint8_t)          // the longest command packet is the Rename Command (65 byte)
+#define FILE_NAME_SIZE 30 
 
 string printCommandCodeDescription(uint8_t code) {
 
@@ -37,6 +39,9 @@ string printCommandCodeDescription(uint8_t code) {
 
         case REQ_SUCCESS:
             return "REQ_SUCCESS";
+
+        case REMOVE_REQ:
+            return "DELETE_REQ";
 
         case FILE_LIST_REQ:
             return "FILE_LIST_REQ";
@@ -73,6 +78,9 @@ string printErrorCodeDescription(uint8_t code) {
 
         case RENAME_FAILED_ERROR:
             return "RENAME_FAILED";
+        
+        case REMOVE_FAILED_ERROR:
+            return "REMOVE_FAILED_ERROR";
 
         default:
             return "UNKNOWN_ERROR";
