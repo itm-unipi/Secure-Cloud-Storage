@@ -301,7 +301,7 @@ int Worker::listRequest(uint8_t* plaintext){
 
     // deserialize the packet
     ListM1 m1 = ListM1::deserialize(plaintext);
-    m1.print();
+    // m1.print();
     #pragma optimize("", off)
     memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
@@ -356,7 +356,7 @@ int Worker::listRequest(uint8_t* plaintext){
 
     // create the m2 packet
     ListM2 m2(m_counter, file_list_size);
-    m2.print();
+    // m2.print();
     uint8_t* serialized_packet = m2.serialize();
 
     // create generic packet
@@ -365,7 +365,7 @@ int Worker::listRequest(uint8_t* plaintext){
     memset(serialized_packet, 0, ListM2::getSize());
     #pragma optimize("", on)
     delete[] serialized_packet;
-    generic_m2.print();
+    // generic_m2.print();
 
     // 2.) send generic packet
     serialized_packet = generic_m2.serialize();
@@ -382,7 +382,7 @@ int Worker::listRequest(uint8_t* plaintext){
     // create the m3 packet
     ListM3 m3(m_counter, available_files, file_list_size);
     delete[] available_files;
-    m3.print();
+    // m3.print();
     serialized_packet = m3.serialize();
 
     // create generic packet
@@ -391,7 +391,7 @@ int Worker::listRequest(uint8_t* plaintext){
     memset(serialized_packet, 0, ListM3::getSize(file_list_size));
     #pragma optimize("", on)
     delete[] serialized_packet;
-    generic_m3.print();
+    // generic_m3.print();
 
     // 2.) send generic packet
     serialized_packet = generic_m3.serialize();
@@ -414,7 +414,7 @@ int Worker::renameRequest(uint8_t* plaintext){
     
     // deserialize the packet
     RenameM1 m1 = RenameM1::deserialize(plaintext);
-    m1.print();
+    // m1.print();
     #pragma optimize("", off)
     memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
@@ -431,12 +431,39 @@ int Worker::renameRequest(uint8_t* plaintext){
     string file_name = (char*)m1.file_name;
     string new_file_name = (char*)m1.new_file_name;
     string path = "data/" + m_username + "/";
-    int res = rename((path + file_name).c_str(), (path + new_file_name).c_str());
-    bool success = (res == 0) ? true : false;
+    bool success = true;
+    uint8_t error_code = NO_ERROR;
+    int res;
+
+    // check if the file with file_name exists
+    FILE* fp = fopen((path + file_name).c_str(), "r");
+    if(!fp){
+        success = false;
+        error_code = FILE_NOT_FOUND_ERROR;
+    }
+    else
+        fclose(fp);
+
+    // check if a file with new_file_name already exists
+    if(success){
+        fp = fopen((path + new_file_name).c_str(), "r");
+        if(fp){
+            success = false;
+            error_code = FILE_ALREADY_EXISTS_ERROR;
+            fclose(fp);
+        }
+    }
+
+    // rename the file
+    if(success){
+        res = rename((path + file_name).c_str(), (path + new_file_name).c_str());
+        success = (res == 0) ? true : false;
+        error_code = (res == 0) ? NO_ERROR : RENAME_FAILED_ERROR;
+    }
 
     // create the result packet
-    Result m2(m_counter, success);
-    m2.print();
+    Result m2(m_counter, success, error_code);
+    // m2.print();
     uint8_t* serialized_packet = m2.serialize();
 
     // create generic packet
@@ -445,7 +472,7 @@ int Worker::renameRequest(uint8_t* plaintext){
     memset(serialized_packet, 0, Result::getSize());
     #pragma optimize("", on)
     delete[] serialized_packet;
-    generic_m2.print();
+    // generic_m2.print();
 
     // 2.) send generic packet
     serialized_packet = generic_m2.serialize();
@@ -522,9 +549,11 @@ int Worker::run() {
             case FILE_LIST_REQ:
                 listRequest(plaintext);
                 break;
+
              case RENAME_REQ:
                 renameRequest(plaintext);
                 break;
+
             case LOGOUT_REQ:
                 logoutRequest(plaintext);
                 return 0;

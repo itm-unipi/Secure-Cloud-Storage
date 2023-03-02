@@ -46,6 +46,8 @@ int Server::run(bool verbose) {
             // create and start the worker
             Worker(socket, verbose).run();
         }, communication_socket, verbose));
+
+        // return 0;
     }
 
     return 0;

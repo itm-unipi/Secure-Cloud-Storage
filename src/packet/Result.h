@@ -83,7 +83,7 @@ struct Result {
         cout << "--------- RESULT ----------" << endl;
         cout << "COMMAND CODE: " << printCommandCodeDescription(command_code) << endl;
         if (command_code == REQ_FAILED)
-            cout << "ERROR CODE: " << (int)error_code << endl;
+            cout << "ERROR CODE: " << printErrorCodeDescription(error_code) << endl;
         cout << "COUNTER: " << counter << endl;
         cout << "------------------------------" << endl;
     }

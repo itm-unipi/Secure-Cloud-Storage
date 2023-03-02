@@ -296,7 +296,7 @@ int Client::list(){
 
     // create the M1 packet
     ListM1 m1(m_counter);
-    m1.print();
+    // m1.print();
     uint8_t* serialized_packet = m1.serialize();
 
     // create generic packet
@@ -305,7 +305,7 @@ int Client::list(){
     memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
     delete[] serialized_packet;
-    generic_m1.print();
+    // generic_m1.print();
 
     // 1.) send generic packet
     serialized_packet = generic_m1.serialize();
@@ -331,7 +331,7 @@ int Client::list(){
     // deserialize the generic packet and verify the fingerprint
     Generic generic_m2 = Generic::deserialize(serialized_packet, Generic::getSize(ListM2::getSize()));
     delete[] serialized_packet;
-    generic_m2.print();
+    // generic_m2.print();
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
         cerr << "[-] (List) HMAC verification failed" << endl;
@@ -354,7 +354,7 @@ int Client::list(){
         return -4;
     }
     ListM2 m2 = ListM2::deserialize(plaintext);
-    m2.print();
+    // m2.print();
 
     #pragma optimize("", off)
     memset(plaintext, 0, ListM2::getSize());
@@ -382,7 +382,7 @@ int Client::list(){
     // deserialize the generic packet and verify the fingerprint
     Generic generic_m3 = Generic::deserialize(serialized_packet, Generic::getSize(ListM3::getSize(m2.file_list_size)));
     delete[] serialized_packet;
-    generic_m3.print();
+    // generic_m3.print();
     verification_res = generic_m3.verifyHMAC(m_hmac_key);
     if (!verification_res) {
         cerr << "[-] (List) HMAC verification failed" << endl;
@@ -405,7 +405,7 @@ int Client::list(){
         return -8;
     }
     ListM3 m3 = ListM3::deserialize(plaintext, plaintext_size);
-    m3.print();
+    // m3.print();
 
     #pragma optimize("", off)
     memset(plaintext, 0, ListM3::getSize(m2.file_list_size));
@@ -449,25 +449,29 @@ int Client::rename(){
     // sanitize file_name and new_file_name and password
     static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-@?!#*.";
     if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-        cerr << "[-] (Run) Not valid file_name" << endl;
+        cerr << "[-] (Rename) Not valid file_name" << endl;
         return -1;
     }
     if (strspn(new_file_name.c_str(), ok_chars) < strlen(new_file_name.c_str())) { 
-        cerr << "[-] (Run) Not valid new_file_name" << endl;
+        cerr << "[-] (Rename) Not valid new_file_name" << endl;
         return -1;
     }
     if (file_name.length() >= 30) {
-        cerr << "[-] (Run) File name too long" << endl;
+        cerr << "[-] (Rename) File name too long" << endl;
         return -1;
     } 
     if (new_file_name.length() >= 30) {
-        cerr << "[-] (Run) New file name too long" << endl;
+        cerr << "[-] (Rename) New file name too long" << endl;
         return -1;
     } 
+    if(file_name == new_file_name) {
+        cerr << "[-] (Rename) File name and new file name can't be equal" << endl;
+        return -1;
+    }
 
     // create the M1 packet
     RenameM1 m1(m_counter, file_name, new_file_name);
-    m1.print();
+    // m1.print();
     uint8_t* serialized_packet = m1.serialize();
 
     // create generic packet
@@ -476,7 +480,7 @@ int Client::rename(){
     memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
     delete[] serialized_packet;
-    generic_m1.print();
+    // generic_m1.print();
 
     // 1.) send generic packet
     serialized_packet = generic_m1.serialize();
@@ -502,7 +506,7 @@ int Client::rename(){
     // deserialize the generic packet and verify the fingerprint
     Generic generic_m2 = Generic::deserialize(serialized_packet, Generic::getSize(Result::getSize()));
     delete[] serialized_packet;
-    generic_m2.print();
+    // generic_m2.print();
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
         cerr << "[-] (Rename) HMAC verification failed" << endl;
@@ -534,8 +538,20 @@ int Client::rename(){
     // check if operation failed
     if (m2.command_code == REQ_SUCCESS)
         return 0;
-    else if (m2.command_code == REQ_FAILED)
+    else if (m2.command_code == REQ_FAILED){
+        switch(m2.error_code){
+            case FILE_NOT_FOUND_ERROR:
+                cerr << "[-] (Rename) File not found" << endl;
+                break;
+            case FILE_ALREADY_EXISTS_ERROR:
+                cerr << "[-] (Rename) File with the new file name already exists" << endl;
+                break;
+            case RENAME_FAILED_ERROR:
+                cerr << "[-] (Rename) Rename operation failed" << endl;
+                break;
+        }
         return -1;
+    }
 
     return -6;
 }
@@ -638,9 +654,10 @@ int Client::run() {
             res = rename();
 
             if (res < 0) {
-                cerr << "[-] (Run) Rename failed with error code " << res << endl;
-                if (res < -1)
+                if (res < -1){
+                    cerr << "[-] (Run) Rename failed with error code " << res << endl;
                     return -1;
+                }
             }
             else
                 cout << "[+] (Run) Rename completed" << endl;
