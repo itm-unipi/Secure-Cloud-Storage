@@ -1,11 +1,17 @@
 #include <exception>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
+#include <fstream>
+#include <filesystem>
+#include <stdio.h>
 
 #include "Worker.h"
 #include "../packet/Generic.h"
 #include "../packet/Login.h"
 #include "../packet/Logout.h"
+#include "../packet/List.h"
+#include "../packet/Rename.h"
+#include "../packet/Remove.h"
 #include "../packet/Result.h"
 #include "../packet/Download.h"
 #include "../packet/Upload.h"
@@ -550,6 +556,266 @@ int Worker::uploadRequest(uint8_t* plaintext) {
 // --------------------------------
 
 // ---------- GIANLUCA ------------
+
+int Worker::listRequest(uint8_t* plaintext){
+
+    // deserialize the packet
+    ListM1 m1 = ListM1::deserialize(plaintext);
+    // m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (ListRequest) Invalid counter" << endl;
+        return -1;
+    }
+
+    incrementCounter();
+
+    // get file names of the
+    string files = "";
+    string path = "data/" + m_username;
+    filesystem::directory_entry dir(path);
+
+    if (dir.is_directory()){
+        for (const auto& file : filesystem::directory_iterator(path)){
+
+            ifstream input(file.path());
+            if (input.is_open()){
+                // get file name
+                string file_name = file.path();
+                file_name.replace(0, path.length() + 1, "");
+                files = files + file_name + "|";
+                input.close();
+            }
+        }
+        
+        if(files.length() > 0)
+            files.replace(files.length() - 1, 1, "");
+    }
+    else{
+        cerr << "[-] Invalid Directory" << endl;
+        return -2;
+    }
+
+    uint32_t file_list_size = 0;
+    uint8_t* available_files = nullptr;
+
+    if(files.length() > 0){
+
+        file_list_size = files.length() + 1;
+        available_files = new uint8_t[file_list_size];
+        memcpy(available_files, files.c_str(), file_list_size);
+    }
+
+    LOG("(ListRequest) got file names of the user");
+
+    // create the m2 packet
+    ListM2 m2(m_counter, file_list_size);
+    // m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, ListM2::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, ListM2::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    int res = m_socket->send(serialized_packet, Generic::getSize(ListM2::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -3;
+    }
+
+    LOG("(ListRequest) Sent M2 packet");
+
+    incrementCounter();
+
+    // create the m3 packet
+    ListM3 m3(m_counter, available_files, file_list_size);
+    delete[] available_files;
+    // m3.print();
+    serialized_packet = m3.serialize();
+
+    // create generic packet
+    Generic generic_m3(m_session_key, m_hmac_key, serialized_packet, ListM3::getSize(file_list_size));
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, ListM3::getSize(file_list_size));
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m3.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m3.serialize();
+    res = m_socket->send(serialized_packet, Generic::getSize(ListM3::getSize(file_list_size)));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -4;
+    }
+
+    LOG("(ListRequest) Sent M3 packet");
+
+
+    incrementCounter();
+    
+    return 0;
+
+}
+
+int Worker::renameRequest(uint8_t* plaintext){
+    
+    // deserialize the packet
+    RenameM1 m1 = RenameM1::deserialize(plaintext);
+    // m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (RenameRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    string file_name = (char*)m1.file_name;
+    string new_file_name = (char*)m1.new_file_name;
+    string path = "data/" + m_username + "/";
+    bool success = true;
+    uint8_t error_code = NO_ERROR;
+    int res;
+
+    // check if the file with file_name exists
+    FILE* fp = fopen((path + file_name).c_str(), "r");
+    if(!fp){
+        success = false;
+        error_code = FILE_NOT_FOUND_ERROR;
+    }
+    else
+        fclose(fp);
+
+    // check if a file with new_file_name already exists
+    if(success){
+        fp = fopen((path + new_file_name).c_str(), "r");
+        if(fp){
+            success = false;
+            error_code = FILE_ALREADY_EXISTS_ERROR;
+            fclose(fp);
+        }
+    }
+
+    // rename the file
+    if(success){
+        res = rename((path + file_name).c_str(), (path + new_file_name).c_str());
+        success = (res == 0) ? true : false;
+        error_code = (res == 0) ? NO_ERROR : RENAME_FAILED_ERROR;
+    }
+
+    // create the result packet
+    Result m2(m_counter, success, error_code);
+    // m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, Result::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    incrementCounter();
+
+    LOG("(RenameRequest) Sent result packet");
+
+    return 0;
+}
+
+int Worker::removeRequest(uint8_t* plaintext){
+
+    // deserialize the packet
+    RemoveM1 m1 = RemoveM1::deserialize(plaintext);
+    // m1.print();
+    #pragma optimize("", off)
+    memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
+    #pragma optimize("", on)
+    delete[] plaintext;
+
+    // check if the counter is correct
+    if (m1.counter != m_counter) {
+        // TODO: use the goto?
+        cerr << "[-] (RemoveRequest) Invalid counter" << endl;
+    }
+
+    incrementCounter();
+
+    string file_name = (char*)m1.file_name;
+    string path = "data/" + m_username + "/";
+    bool success = true;
+    uint8_t error_code = NO_ERROR;
+    int res;
+
+    // check if the file with file_name exists
+    FILE* fp = fopen((path + file_name).c_str(), "r");
+    if(!fp){
+        success = false;
+        error_code = FILE_NOT_FOUND_ERROR;
+    }
+    else
+        fclose(fp);
+
+    // remove the file
+    if(success){
+        res = remove((path + file_name).c_str());
+        success = (res == 0) ? true : false;
+        error_code = (res == 0) ? NO_ERROR : RENAME_FAILED_ERROR;
+    }
+
+    // create the result packet
+    Result m2(m_counter, success, error_code);
+    // m2.print();
+    uint8_t* serialized_packet = m2.serialize();
+
+    // create generic packet
+    Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, Result::getSize());
+    #pragma optimize("", off)
+    memset(serialized_packet, 0, Result::getSize());
+    #pragma optimize("", on)
+    delete[] serialized_packet;
+    // generic_m2.print();
+
+    // 2.) send generic packet
+    serialized_packet = generic_m2.serialize();
+    res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
+    delete[] serialized_packet;
+    if (res < 0) {
+        return -1;
+    }
+
+    incrementCounter();
+
+    LOG("(RemoveRequest) Sent result packet");
+
+    return 0;
+}
 // --------------------------------
 
 
@@ -610,17 +876,27 @@ int Worker::run() {
         {
             case UPLOAD_REQ:
                 uploadRequest(plaintext);
+                break;         
+                
+            case DOWNLOAD_REQ:
+                downloadRequest(plaintext);
+                break;
+            
+            case REMOVE_REQ:
+                removeRequest(plaintext);
+                break;
+                
+            case FILE_LIST_REQ:
+                listRequest(plaintext);
+                break;
+
+            case RENAME_REQ:
+                renameRequest(plaintext);
                 break;
 
             case LOGOUT_REQ:
                 logoutRequest(plaintext);
-                return 0;            
-                
-            // ----------- BIAGIO -------------
-            case DOWNLOAD_REQ:
-                downloadRequest(plaintext);
-                break;
-            // --------------------------------
+                return 0;   
             
             default:
                 cerr << "[-] (Run) Invalid command received" << endl;

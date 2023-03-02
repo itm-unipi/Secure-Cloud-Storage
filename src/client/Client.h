@@ -35,6 +35,11 @@ class Client {
     // --------------------------------
 
     // ---------- GIANLUCA ------------
+
+    int list();
+    int rename();
+    int remove();
+    
     // --------------------------------
 
     bool incrementCounter();

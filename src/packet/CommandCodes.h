@@ -13,48 +13,95 @@ using namespace std;
 #define DOWNLOAD_REQ    5
 #define FILE_FOUND      6
 #define FILE_NOT_FOUND  7
-#define DELETE_REQ      8
+#define REMOVE_REQ      8
 #define FILE_LIST_REQ   9
 #define FILE_LIST_SIZE  10
 #define FILE_LIST       11
 #define RENAME_REQ      12
-#define LOGOUT_REQ      13
+#define LOGOUT_REQ      13 
+
+// error codes
+#define NO_ERROR                  0
+#define FILE_NOT_FOUND_ERROR      1
+#define FILE_ALREADY_EXISTS_ERROR 2
+#define RENAME_FAILED_ERROR       3
+#define REMOVE_FAILED_ERROR       4
 
 #define COMMAND_FIELD_PACKET_SIZE 65 * sizeof(uint8_t)          // the longest command packet is the Rename Command (65 byte)
+#define FILE_NAME_SIZE 30 
 
 string printCommandCodeDescription(uint8_t code) {
 
-    switch (code)
-    {
-        case 0:
+    switch (code){
+
+        case REQ_FAILED:
             return "REQ_FAILED";
 
-        case 1:
+        case REQ_SUCCESS:
             return "REQ_SUCCESS";
         
-        case 2:
+        case UPLOAD_REQ:
             return "UPLOAD_REQ";
         
-        case 3:
+        case FILE_CHUNK:
             return "FILE_CHUNK";
         
-        case 4:
+        case TRANSFER_ACK:
             return "TRANSFER_ACK";
 
-        case 5:
+        case DOWNLOAD_REQ:
             return "DOWNLOAD_REQ";
 
-        case 6:
+        case FILE_FOUND:
             return "FILE_FOUND";
 
-        case 7:
+        case FILE_NOT_FOUND:
             return "FILE_NOT_FOUND";        
 
-        case 13:
+        case REMOVE_REQ:
+            return "DELETE_REQ";
+
+        case FILE_LIST_REQ:
+            return "FILE_LIST_REQ";
+        
+        case FILE_LIST_SIZE:
+            return "FILE_LIST_SIZE";
+
+        case FILE_LIST:
+            return "FILE_LIST";
+        
+        case RENAME_REQ:
+            return "RENAME_REQ";
+
+        case LOGOUT_REQ:
             return "LOGOUT_REQ";
     
         default:
             return "UNKNOWN";
+    }
+}
+
+string printErrorCodeDescription(uint8_t code) {
+
+    switch (code) {
+
+        case NO_ERROR:
+            return "NO_ERROR";
+    
+        case FILE_NOT_FOUND_ERROR:
+            return "FILE_NOT_FOUND";
+
+        case FILE_ALREADY_EXISTS_ERROR:
+            return "FILE_ALREADY_EXISTS";
+
+        case RENAME_FAILED_ERROR:
+            return "RENAME_FAILED";
+        
+        case REMOVE_FAILED_ERROR:
+            return "REMOVE_FAILED_ERROR";
+
+        default:
+            return "UNKNOWN_ERROR";
     }
 }
 
