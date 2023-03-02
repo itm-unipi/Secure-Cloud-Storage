@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "./CommandCodes.h"
+#include "../utility/FileManager.h"
 
 using namespace std;
 

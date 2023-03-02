@@ -789,11 +789,11 @@ int Client::rename() {
         cerr << "[-] (Rename) Not valid new_file_name" << endl;
         return -1;
     }
-    if (file_name.length() >= 30) {
+    if (file_name.length() >= FILE_NAME_SIZE) {
         cerr << "[-] (Rename) File name too long" << endl;
         return -1;
     } 
-    if (new_file_name.length() >= 30) {
+    if (new_file_name.length() >= FILE_NAME_SIZE) {
         cerr << "[-] (Rename) New file name too long" << endl;
         return -1;
     } 
@@ -904,7 +904,7 @@ int Client::remove() {
         cerr << "[-] (Remove) Not valid file_name" << endl;
         return -1;
     }
-    if (file_name.length() >= 30) {
+    if (file_name.length() >= FILE_NAME_SIZE) {
         cerr << "[-] (Remove) File name too long" << endl;
         return -1;
     } 
@@ -1029,7 +1029,7 @@ int Client::run() {
         cerr << "[-] (Run) Not valid password" << endl;
         return -1;
     }
-    if (m_username.length() >= 30) {
+    if (m_username.length() >= USERNAME_SIZE) {
         cerr << "[-] (Run) Username too long" << endl;
         return -1;
     } 

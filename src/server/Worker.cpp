@@ -321,6 +321,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     string file_path = "data/" + m_username + "/" + string(m1.file_name);
     LOG("(DownloadRequest) Searching for " + file_path);
     bool file_found = FileManager::exists(file_path);
+
     size_t file_size = 0;
     FileManager* requested_file = nullptr;
     if (file_found) {
@@ -778,7 +779,7 @@ int Worker::removeRequest(uint8_t* plaintext) {
     if (success) {
         res = remove((path + file_name).c_str());
         success = (res == 0) ? true : false;
-        error_code = (res == 0) ? NO_ERROR : RENAME_FAILED_ERROR;
+        error_code = (res == 0) ? NO_ERROR : DELETE_FAILED_ERROR;
     }
 
     // create the result packet

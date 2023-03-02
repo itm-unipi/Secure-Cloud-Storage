@@ -14,10 +14,16 @@ FileManager::FileManager(std::string filename, uint8_t open_type) {
     else if (open_type == WRITE)
         m_outdata.open(filename, std::ios::binary);
 
-    // check if the open failed
+    // check if the open failed in read mode
     if (open_type == READ && !m_indata.is_open()) {
         cerr << "[-] (FileManager) File " << filename << " not exists" << endl;
         throw -1;
+    }
+
+    // check if the open failed in write mode
+    if (open_type == WRITE && m_outdata.is_open()) {
+        cerr << "[-] (FileManager) File " << filename << " already exists" << endl;
+        throw -2;
     }
 
     // get the information if is in read mode

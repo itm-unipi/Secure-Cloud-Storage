@@ -1,5 +1,7 @@
 # To Do List
 
+* controllo file manager in WRITE è sbagliato
+* creare il .h per le define e il .h per gli error code
 * controllare la funzione che incrementa il counter e gestisce l'overflow
 * come gestiamo il controllo del counter? (GOTO)
 * cancellare print commentate
@@ -9,5 +11,5 @@
 * valutare se mettere il controllo del command_code, command_code sbagliato non puo avvenire se non a causa di un reply attack, in generale se ne accorgerebbe l'errore del counter ma tale errore verrebbe scoperto solo dopo
 la deserializzazione del pacchetto che potrebbe fallire se il command_code è diverso
 * se nel logout si invia sempre il REQ_SUCCESS, che senso ha dato che il TCP ha l'ack automatico?
-* TOCTOU race condition
 * upper cammel usato in tutti i pacchetti
+* sanitizzare path con ..

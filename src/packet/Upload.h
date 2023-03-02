@@ -10,8 +10,6 @@
 #include "../utility/FileManager.h"
 #include "./CommandCodes.h"
 
-#define FILE_NAME_SIZE 30
-
 using namespace std;
 
 // ----------------------------------- UPLOAD M1 ------------------------------------

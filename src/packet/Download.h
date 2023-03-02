@@ -12,15 +12,13 @@
 
 using namespace std;
 
-#define FILE_NAME_SIZE 30
-
 // ---------------------------------- DOWNLOAD M1 -----------------------------------
 
 struct DownloadM1 {
 
     uint8_t command_code;
     uint32_t counter;
-    char file_name[30];
+    char file_name[FILE_NAME_SIZE];
 
     DownloadM1() {}
 

@@ -28,7 +28,6 @@ using namespace std;
 #define DELETE_FAILED_ERROR       4
 
 #define COMMAND_FIELD_PACKET_SIZE 65 * sizeof(uint8_t)          // the longest command packet is the Rename Command (65 byte)
-#define FILE_NAME_SIZE 30 
 
 string printCommandCodeDescription(uint8_t code) {
 

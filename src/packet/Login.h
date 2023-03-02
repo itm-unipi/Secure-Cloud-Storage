@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 
 #include "../security/CertificateStore.h"
+#include "../client/Client.h"
 
 using namespace std;
 
@@ -17,7 +18,7 @@ struct LoginM1 {
 
     uint8_t ephemeral_key[1024];
     uint32_t ephemeral_key_size;
-    char username[30];
+    char username[USERNAME_SIZE];
 
     LoginM1() {}
 
@@ -44,7 +45,7 @@ struct LoginM1 {
         memcpy(buffer + position, &ephemeral_key_size_hton, sizeof(uint32_t));
         position += sizeof(uint32_t);
 
-        memcpy(buffer + position, username, 30 * sizeof(char));
+        memcpy(buffer + position, username, USERNAME_SIZE * sizeof(char));
 
         return buffer;
     }
@@ -62,7 +63,7 @@ struct LoginM1 {
         loginM1.ephemeral_key_size = ntohl(ephemeral_key_size_hton);
         position += sizeof(uint32_t);
 
-        memcpy(loginM1.username, buffer + position, 30 * sizeof(char));
+        memcpy(loginM1.username, buffer + position, USERNAME_SIZE * sizeof(char));
 
         return loginM1;
     }
@@ -73,7 +74,7 @@ struct LoginM1 {
 
         size += 1024 * sizeof(uint8_t);
         size += sizeof(uint32_t);
-        size += 30 * sizeof(char);
+        size += USERNAME_SIZE * sizeof(char);
 
         return size;
     }

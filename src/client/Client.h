@@ -4,6 +4,8 @@
 #define SERVER_IP "localhost"
 #define SERVER_PORT 6000
 
+#define USERNAME_SIZE 30
+
 #define LOG(...) if (m_verbose) { cout << "[i] " << __VA_ARGS__ << endl; }
 
 #include <iostream>
