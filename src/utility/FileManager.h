@@ -14,12 +14,12 @@ class FileManager {
     ifstream m_indata;
     ofstream m_outdata;
 
-    string m_filename;
+    string m_file_name;
     uint8_t m_open_type;
     size_t m_chunk_size, m_file_size, m_last_chunk_size, m_num_of_chunks;
 
 public:
-    FileManager(string filename, uint8_t open_type);
+    FileManager(string file_name, uint8_t open_type);
     FileManager(const FileManager&) = delete;
     ~FileManager();
 

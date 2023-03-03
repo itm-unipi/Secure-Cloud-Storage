@@ -297,6 +297,11 @@ int Client::logout() {
 
 int Client::download(string file_name) {
 
+    if (FileManager::exists(file_name)) {
+        cerr << "[-] (Download) The requested file already exists in local filesystem" << endl;
+        return -1;
+    }
+
     // 1) send command packet along with the file_name to download
     DownloadM1 m1(m_counter, file_name);
     // m1.print();
@@ -312,7 +317,7 @@ int Client::download(string file_name) {
     int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
     delete[] serialized_packet;
     if (res < 0) {
-        return -1;
+        return -2;
     }
 
     incrementCounter();
@@ -322,7 +327,7 @@ int Client::download(string file_name) {
     serialized_packet = new uint8_t[generic_m2_size];
     res = m_socket->receive(serialized_packet, generic_m2_size);
     if (res < 0) {
-        return -2;
+        return -3;
     }
 
     // deserialize the generic packet and verify the fingerprint
@@ -331,7 +336,7 @@ int Client::download(string file_name) {
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
         cerr << "[-] (Download) HMAC verification failed" << endl;
-        return -3;
+        return -4;
     }
 
     LOG("(Download) Received valid packet");
@@ -357,7 +362,7 @@ int Client::download(string file_name) {
     // check if the requested file has been found on the cloud
     if (m2.command_code == FILE_NOT_FOUND) {
         LOG("(Download) File not found")
-        return -4;
+        return -5;
     } else {
         LOG("(Download) File found")
     }
@@ -380,7 +385,7 @@ int Client::download(string file_name) {
         serialized_packet = new uint8_t[generic_mi_size];
         res = m_socket->receive(serialized_packet, generic_mi_size);
         if (res < 0) {
-            return -5;
+            return -6;
         }
 
         // deserialize the generic packet and verify the fingerprint
@@ -389,7 +394,7 @@ int Client::download(string file_name) {
         bool verification_res = generic_mi.verifyHMAC(m_hmac_key);
         if (!verification_res) {
             cerr << "[-] (Download) HMAC verification failed" << endl;
-            return -6;
+            return -7;
         }
         
         // get the packet content
@@ -424,7 +429,7 @@ int Client::download(string file_name) {
     }
 
     if (received_bytes != requested_file.getFileSize()) {
-        return -7; 
+        return -8; 
     }
 
     return 0;

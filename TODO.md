@@ -1,6 +1,5 @@
 # To Do List
 
-* controllo file manager in WRITE è sbagliato
 * creare il .h per le define e il .h per gli error code
 * controllare la funzione che incrementa il counter e gestisce l'overflow
 * come gestiamo il controllo del counter? (GOTO)

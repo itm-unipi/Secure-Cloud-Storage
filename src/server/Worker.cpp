@@ -57,8 +57,8 @@ int Worker::loginRequest() {
     LoginM2 m2(1);
 
     // check if username exists (the server must have a file called username), and retrieve the user's public key
-    string filename = "resources/public_keys/" + (string)m1.username + "_key.pem";
-    BIO *bp = BIO_new_file(filename.c_str(), "r");
+    string file_name = "resources/public_keys/" + (string)m1.username + "_key.pem";
+    BIO *bp = BIO_new_file(file_name.c_str(), "r");
     EVP_PKEY* user_public_key = nullptr;
     if (!bp) {
         m2.result = 0;
@@ -87,8 +87,8 @@ int Worker::loginRequest() {
     }
 
     // extract the server private key
-    filename = "resources/private_keys/server_key.pem";
-    bp = BIO_new_file(filename.c_str(), "r");
+    file_name = "resources/private_keys/server_key.pem";
+    bp = BIO_new_file(file_name.c_str(), "r");
     if (!bp) {
         // TODO: errore + delete
         return -4;

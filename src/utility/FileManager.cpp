@@ -3,36 +3,36 @@
 #include <exception>
 #include "FileManager.h"
 
-FileManager::FileManager(std::string filename, uint8_t open_type) {
+FileManager::FileManager(string file_name, uint8_t open_type) {
 
-    m_filename = filename;
+    m_file_name = file_name;
     m_open_type = open_type;
 
-    // open the file
-    if (open_type == READ)
-        m_indata.open(filename, std::ios::binary);
-    else if (open_type == WRITE)
-        m_outdata.open(filename, std::ios::binary);
-
-    // check if the open failed in read mode
-    if (open_type == READ && !m_indata.is_open()) {
-        cerr << "[-] (FileManager) File " << filename << " not exists" << endl;
+    // check if the file already exists in write mode
+    if (open_type == WRITE && exists(file_name)) {
+        cerr << "[-] (FileManager) File " << file_name << " already exists" << endl;
         throw -1;
     }
 
-    // check if the open failed in write mode
-    if (open_type == WRITE && m_outdata.is_open()) {
-        cerr << "[-] (FileManager) File " << filename << " already exists" << endl;
+    // open the file
+    if (open_type == READ)
+        m_indata.open(file_name, ios::binary);
+    else if (open_type == WRITE)
+        m_outdata.open(file_name, ios::binary);
+
+    // check if the open failed in read mode
+    if (open_type == READ && !m_indata.is_open()) {
+        cerr << "[-] (FileManager) File " << file_name << " not exists" << endl;
         throw -2;
     }
 
     // get the information if is in read mode
     if (open_type == READ) {
         // get file info
-        std::streampos begin,end;
-        std::ifstream file(filename, std::ios::binary);
+        streampos begin,end;
+        ifstream file(file_name, ios::binary);
         begin = file.tellg();
-        file.seekg(0, std::ios::end);
+        file.seekg(0, ios::end);
         end = file.tellg();
         file.close();
 
@@ -87,7 +87,7 @@ bool FileManager::exists(string file_name) {
 
     // try to open the file
     ifstream indata;
-    indata.open(file_name, std::ios::binary);
+    indata.open(file_name, ios::binary);
 
     if (!indata.is_open())
         return false;
