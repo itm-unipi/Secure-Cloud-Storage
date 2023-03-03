@@ -92,7 +92,7 @@ struct DownloadM2 {
 
     DownloadM2() {}
 
-    DownloadM2(uint32_t counter, bool success, uint32_t file_size = 0) {
+    DownloadM2(uint32_t counter, bool success, size_t file_size = 0) {
         
         if (success) {
             this->command_code = FILE_FOUND;
@@ -101,7 +101,7 @@ struct DownloadM2 {
         }
 
         this->counter = counter;
-        this->file_size = file_size;
+        this->file_size = (file_size < 4UL * 1024 * 1024 * 1024) ? (uint32_t)file_size : 0;
      }
 
     uint8_t* serialize() const { 

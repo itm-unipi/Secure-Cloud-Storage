@@ -404,7 +404,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
 
     // get the M1 packet
     UploadM1 m1 = UploadM1::deserialize(plaintext);
-    // m1.print();
+    m1.print();
     #pragma optimize("", off)
     memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)
@@ -457,7 +457,8 @@ int Worker::uploadRequest(uint8_t* plaintext) {
 
     // prepare the file reception
     FileManager file(file_path, WRITE);
-    file.calculateFileInfo(m1.file_size);
+    size_t file_size = m1.file_size != 0 ? m1.file_size : 4UL * 1024 * 1024 * 1024;
+    file.calculateFileInfo(file_size);
 
     size_t chunk_size = file.getChunkSize();
     size_t received_size = 0;
@@ -513,7 +514,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
 
         // log upload status
         received_size += chunk_size;
-        LOG("(UploadRequest) Received " << received_size << "byte/" << file.getFileSize() << "byte");
+        LOG("(UploadRequest) Received " << received_size << "bytes/" << file.getFileSize() << "bytes");
     }
 
     // create the Mn packet
@@ -602,7 +603,7 @@ int Worker::listRequest(uint8_t* plaintext) {
         memcpy(available_files, files.c_str(), file_list_size);
     }
 
-    LOG("(ListRequest) got file names of the user");
+    LOG("(ListRequest) Got file names of the user");
 
     // create the m2 packet
     ListM2 m2(m_counter, file_list_size);

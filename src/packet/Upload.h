@@ -23,12 +23,12 @@ struct UploadM1 {
 
     UploadM1() {}
 
-    UploadM1(uint32_t counter, string file_name, uint32_t file_size) {
+    UploadM1(uint32_t counter, string file_name, size_t file_size) {
 
         this->command_code = UPLOAD_REQ;
         this->counter = counter;
         strncpy(this->file_name, file_name.c_str(), FILE_NAME_SIZE);
-        this->file_size = file_size;
+        this->file_size = (file_size < 4UL * 1024 * 1024 * 1024) ? (uint32_t)file_size : 0;
     }
 
     uint8_t* serialize() const { 

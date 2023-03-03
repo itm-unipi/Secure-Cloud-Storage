@@ -366,7 +366,8 @@ int Client::download(string file_name) {
 
     // initialize the file manager in order to create file on the file system and obtain all the info about the requested file
     FileManager requested_file(file_name, WRITE);
-    requested_file.calculateFileInfo(m2.file_size);
+    size_t file_size = m2.file_size != 0 ? m2.file_size : 4UL * 1024 * 1024 * 1024;
+    requested_file.calculateFileInfo(file_size);
     
     // wait for the receipt of all file chunks
     size_t chunk_size = requested_file.getChunkSize();
@@ -459,7 +460,7 @@ int Client::upload(string file_name) {
 
     // create the M1 packet
     UploadM1 m1(m_counter, file_name, file.getFileSize());
-    // m1.print();
+    m1.print();
     uint8_t* serialized_packet = m1.serialize();
 
     // create generic packet
