@@ -30,8 +30,8 @@ class Client {
     int download(string file_name);
     int upload(string file_name);
     int list();
-    int rename();
-    int remove();
+    int rename(string file_name, string new_file_name);
+    int remove(string file_name);
 
     void incrementCounter();
 

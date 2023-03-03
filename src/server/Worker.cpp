@@ -257,10 +257,8 @@ int Worker::logoutRequest(uint8_t* plaintext) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m1.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (LogoutRequest) Invalid counter" << endl;
-    }
+    if (m1.counter != m_counter)
+        throw -2;
 
     incrementCounter();
 
@@ -311,9 +309,8 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m1.counter != m_counter) {
-        cerr << "[-] (DownloadRequest) Invalid counter" << endl;
-    }
+    if (m1.counter != m_counter) 
+        throw -2;
 
     incrementCounter();
 
@@ -356,6 +353,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
     }
     
     /*
+    // [test]
     cout << "----------------------------------" << endl;
     cout << "FILE SIZE: " << requested_file->getFileSize() << " bytes" << endl;
     cout << "NUM OF CHUNKS: " << requested_file->getNumOfChunks() << endl;
@@ -413,10 +411,8 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m1.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (UploadRequest) Invalid counter" << endl;
-    }
+    if (m1.counter != m_counter) 
+        throw -2;
 
     incrementCounter();
 
@@ -507,11 +503,9 @@ int Worker::uploadRequest(uint8_t* plaintext) {
         delete[] plaintext;
 
         // check if the counter is correct
-        if (mi.counter != m_counter) {
-            // TODO: use the goto?
-            cerr << "[-] (UploadRequest) Invalid counter" << endl;
-        }
-
+        if (mi.counter != m_counter) 
+            throw -2;
+        
         incrementCounter();
 
         // write the received chunk in the file
@@ -568,11 +562,8 @@ int Worker::listRequest(uint8_t* plaintext) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m1.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (ListRequest) Invalid counter" << endl;
-        return -1;
-    }
+    if (m1.counter != m_counter) 
+        throw -2;
 
     incrementCounter();
 
@@ -680,10 +671,8 @@ int Worker::renameRequest(uint8_t* plaintext) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m1.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (RenameRequest) Invalid counter" << endl;
-    }
+    if (m1.counter != m_counter) 
+        throw -2;
 
     incrementCounter();
 
@@ -756,10 +745,8 @@ int Worker::removeRequest(uint8_t* plaintext) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m1.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (RemoveRequest) Invalid counter" << endl;
-    }
+    if (m1.counter != m_counter) 
+        throw -2;
 
     incrementCounter();
 
@@ -895,7 +882,14 @@ int Worker::run() {
                     break;
             }
         } catch (int e) {
-            cerr << "[-] (Run) Renegotiation failed" << endl;
+
+            if (e == -1)
+                cerr << "[-] (Run) Renegotiation failed" << endl;
+            else if (e == -2)
+                cerr << "[-] (Run) Replay attack detected" << endl;
+            else if (e == -3)
+                cerr << "[-] (signalHandler) Socket closed unexpectedly" << endl;
+            
             return -3;
         }
     }

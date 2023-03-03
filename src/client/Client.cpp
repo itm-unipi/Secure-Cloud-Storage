@@ -279,10 +279,8 @@ int Client::logout() {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m2.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (Logout) Invalid counter" << endl;
-    }
+    if (m2.counter != m_counter)
+        throw -2;
 
     // check if operation failed
     if (m2.command_code == REQ_SUCCESS)
@@ -353,9 +351,8 @@ int Client::download(string file_name) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m2.counter != m_counter) {
-        cerr << "[-] (Download) Invalid counter" << endl;
-    }
+    if (m2.counter != m_counter)
+        throw -2;
 
     incrementCounter();
 
@@ -404,20 +401,19 @@ int Client::download(string file_name) {
         DownloadMi mi = DownloadMi::deserialize(plaintext, chunk_size);
         // mi.print(chunk_size);
 
-        // copy chunk into the new local file
-        requested_file.writeChunk(mi.chunk, chunk_size);
-
         #pragma optimize("", off)
         memset(plaintext, 0, DownloadMi::getSize(chunk_size));
         #pragma optimize("", on)
         delete[] plaintext;
 
         // check if the counter is correct
-        if (mi.counter != m_counter) {
-            cerr << "[-] (Download) Invalid counter" << endl;
-        }
+        if (mi.counter != m_counter)
+            throw -2;
 
         incrementCounter();
+
+        // copy chunk into the new local file
+        requested_file.writeChunk(mi.chunk, chunk_size);
         
         received_bytes += chunk_size;
         LOG("(Download) Downloaded " << received_bytes << "bytes/" << requested_file.getFileSize() << "bytes");
@@ -514,10 +510,8 @@ int Client::upload(string file_name) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m2.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (Upload) Invalid counter" << endl;
-    }
+    if (m2.counter != m_counter)
+        throw -2;
 
     incrementCounter();
 
@@ -559,7 +553,7 @@ int Client::upload(string file_name) {
         int res = m_socket->send(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
         delete[] serialized_packet;
         if (res < 0) {
-            return -7;      // TODO
+            return -7;
         }
 
         incrementCounter();
@@ -610,10 +604,8 @@ int Client::upload(string file_name) {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (mn.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (Upload) Invalid counter" << endl;
-    }
+    if (mn.counter != m_counter)
+        throw -2;
 
     incrementCounter();
 
@@ -698,11 +690,8 @@ int Client::list() {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m2.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (List) Invalid counter" << endl;
-        return -5;
-    }
+    if (m2.counter != m_counter)
+        throw -2;
 
     incrementCounter();
 
@@ -749,11 +738,8 @@ int Client::list() {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m3.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (List) Invalid counter" << endl;
-        return -9;
-    }
+    if (m3.counter != m_counter) 
+        throw -2;
 
     incrementCounter();
 
@@ -775,37 +761,7 @@ int Client::list() {
 
 // ------------------------------------------------------------------------------
 
-int Client::rename() {
-
-    // get input from user
-    string file_name, new_file_name;
-    cout << "Insert file name: ";
-    cin >> file_name;
-    cout << "Insert new file name: ";
-    cin >> new_file_name;
-    
-    // sanitize file_name and new_file_name
-    static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-@?!#*.";
-    if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-        cerr << "[-] (Rename) Not valid file_name" << endl;
-        return -1;
-    }
-    if (strspn(new_file_name.c_str(), ok_chars) < strlen(new_file_name.c_str())) { 
-        cerr << "[-] (Rename) Not valid new_file_name" << endl;
-        return -1;
-    }
-    if (file_name.length() >= FILE_NAME_SIZE) {
-        cerr << "[-] (Rename) File name too long" << endl;
-        return -1;
-    } 
-    if (new_file_name.length() >= FILE_NAME_SIZE) {
-        cerr << "[-] (Rename) New file name too long" << endl;
-        return -1;
-    } 
-    if(file_name == new_file_name) {
-        cerr << "[-] (Rename) File name and new file name can't be equal" << endl;
-        return -1;
-    }
+int Client::rename(string file_name, string new_file_name) {
 
     // create the M1 packet
     RenameM1 m1(m_counter, file_name, new_file_name);
@@ -865,11 +821,8 @@ int Client::rename() {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m2.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (Rename) Invalid counter" << endl;
-        return -5;
-    }
+    if (m2.counter != m_counter) 
+        throw -2;
 
     incrementCounter();
 
@@ -896,23 +849,7 @@ int Client::rename() {
 
 // ------------------------------------------------------------------------------
 
-int Client::remove() {
-
-    // get input from user
-    string file_name;
-    cout << "Insert file name: ";
-    cin >> file_name;
-    
-    // sanitize file_name
-    static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-@?!#*.";
-    if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-        cerr << "[-] (Remove) Not valid file_name" << endl;
-        return -1;
-    }
-    if (file_name.length() >= FILE_NAME_SIZE) {
-        cerr << "[-] (Remove) File name too long" << endl;
-        return -1;
-    } 
+int Client::remove(string file_name) {
 
     // create the M1 packet
     RemoveM1 m1(m_counter, file_name);
@@ -972,11 +909,8 @@ int Client::remove() {
     delete[] plaintext;
 
     // check if the counter is correct
-    if (m2.counter != m_counter) {
-        // TODO: use the goto?
-        cerr << "[-] (Remove) Invalid counter" << endl;
-        return -5;
-    }
+    if (m2.counter != m_counter) 
+        throw -2;
 
     incrementCounter();
 
@@ -1058,7 +992,7 @@ int Client::run() {
     // connect to the server
     try {
         m_socket = new CommunicationSocket(SERVER_IP, SERVER_PORT);
-    } catch (const std::exception& e) {
+    } catch (const exception& e) {
         cerr << "[-] (Run) Exception: " << e.what() << endl;
         return -4;
     }
@@ -1109,7 +1043,7 @@ int Client::run() {
             }
 
             else if (command == "upload") {
-                // get the file name
+                
                 string file_name;
                 cout << "Insert the name of the file: ";
                 cin >> file_name;
@@ -1124,26 +1058,66 @@ int Client::run() {
             }
 
             else if (command == "rename") {
-                res = rename();
-                if (res < 0) {
-                    if (res < -1){
-                        cerr << "[-] (Run) Rename failed with error code " << res << endl;
-                        return -1;
-                    }
+                // get input from user
+                string file_name, new_file_name;
+                cout << "Insert file name: ";
+                cin >> file_name;
+                cout << "Insert new file name: ";
+                cin >> new_file_name;
+                
+                // sanitize file_name and new_file_name
+                if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
+                    cerr << "[-] (Rename) Not valid file_name" << endl;
+                    continue;
                 }
-                else
+                if (strspn(new_file_name.c_str(), ok_chars) < strlen(new_file_name.c_str())) { 
+                    cerr << "[-] (Rename) Not valid new_file_name" << endl;
+                    continue;
+                }
+                if (file_name.length() >= FILE_NAME_SIZE) {
+                    cerr << "[-] (Rename) File name too long" << endl;
+                    continue;
+                } 
+                if (new_file_name.length() >= FILE_NAME_SIZE) {
+                    cerr << "[-] (Rename) New file name too long" << endl;
+                    continue;
+                } 
+                if(file_name == new_file_name) {
+                    cerr << "[-] (Rename) File name and new file name can't be equal" << endl;
+                    continue;
+                }
+
+                res = rename(file_name, new_file_name);
+                if (res < -1) {
+                    cerr << "[-] (Run) Rename failed with error code " << res << endl;
+                    return -1;
+                }
+                else if (!res)
                     cout << "[+] (Run) Rename completed" << endl;
             }
 
             else if (command == "delete") {
-                res = remove();
-                if (res < 0) {
-                    if (res < -1){
-                        cerr << "[-] (Run) Remove failed with error code " << res << endl;
-                        return -1;
-                    }
+                // get input from user
+                string file_name;
+                cout << "Insert file name: ";
+                cin >> file_name;
+                
+                // sanitize file_name
+                if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
+                    cerr << "[-] (Remove) Not valid file_name" << endl;
+                    continue;
                 }
-                else
+                if (file_name.length() >= FILE_NAME_SIZE) {
+                    cerr << "[-] (Remove) File name too long" << endl;
+                    continue;
+                } 
+    
+                res = remove(file_name);
+                if (res < -1) {
+                    cerr << "[-] (Run) Remove failed with error code " << res << endl;
+                    return -1;
+                }
+                else if (!res)
                     cout << "[+] (Run) Remove completed" << endl;
             }
 
@@ -1178,7 +1152,19 @@ int Client::run() {
             } 
         }
     } catch (int e) {
-        cerr << "[-] (Run) Renegotiation failed" << endl;
+
+        if (e == -1) {
+            cerr << "[-] (Run) Renegotiation failed" << endl;
+        } else if (e == -2) {
+            cerr << "[-] (Run) Replay attack detected" << endl;
+        } else if (e == -3) {
+            logout();
+            cout << "[+] (Run) Client close" << endl;
+            return 1;
+        } else if (e == -4) {
+            cerr << "[-] (Run) Socket closed unexpectedly" << endl;
+        }
+
         return -1;
     }
 

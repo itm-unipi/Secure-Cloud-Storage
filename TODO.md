@@ -1,8 +1,7 @@
 # To Do List
 
 * creare il .h per le define e il .h per gli error code
-* controllare se l'increment counter è posizionato bene
-* come gestiamo il controllo del counter? (GOTO)
+* gestire la size a 4G = 0 in download e upload
 * cancellare print commentate
 * Sistemare lo script di test
 * Racchiudere #pragma in una utility function
@@ -13,3 +12,5 @@ la deserializzazione del pacchetto che potrebbe fallire se il command_code è di
 * upper cammel usato in tutti i pacchetti
 * sanitizzare path con ..
 * decidere se fare una cartella download in locale
+* rivedere la gestione del ctrl + c nel server e nel client che va all'infinito
+* dividere il main

@@ -1,22 +1,48 @@
 #include <iostream>
 #include <cstring>
+#include <csignal>
 using namespace std;
 
 #ifdef SERVER_APPLICATION
 
-#include <csignal>
 #include "server/Server.h"
 
-void signalHandler(int signum) {
+void serverSignalHandler(int signum) {
     
-    cout << "[+] (signalHandler) Server closed" << endl;
-    Server::closeInstance();
-    exit(signum);
+    switch (signum) {
+
+        case SIGINT:
+            cout << "[+] (signalHandler) Server closed" << endl;
+            Server::closeInstance();
+            exit(signum);
+        
+        case SIGPIPE:
+            cout << "[+] (signalHandler) SIGPIPE intercepted" << endl;
+            throw -3;
+
+        default:
+            break;
+    }
 }
 
 #elif CLIENT_APPLICATION
 
 #include "client/Client.h"
+
+void clientSignalHandler(int signum) {
+    
+    switch (signum) {
+
+        case SIGINT:
+            throw -3;
+        
+        case SIGPIPE:
+            throw -4;
+
+        default:
+            break;
+    }
+}
 
 #endif
 
@@ -30,13 +56,18 @@ int main(int argc, char** argv) {
 
 #ifdef SERVER_APPLICATION
 
-    // register the signal handler for SIGINT
-    signal(SIGINT, signalHandler);
+    // register the signal handler for SIGINT and SIGPIPE
+    signal(SIGINT, serverSignalHandler);
+    signal(SIGPIPE, serverSignalHandler);
     
     Server::getInstace()->run(verbose);
     Server::closeInstance();
 
 #elif CLIENT_APPLICATION
+
+    // register the signal handler for SIGINT and SIGPIPE
+    // signal(SIGINT, clientSignalHandler);
+    signal(SIGPIPE, clientSignalHandler);
 
     while (1) {
         if (Client(verbose).run() == 1)
