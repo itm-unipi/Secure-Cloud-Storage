@@ -812,19 +812,17 @@ int Worker::removeRequest(uint8_t* plaintext) {
 
 // ------------------------------------------------------------------------------
 
-bool Worker::incrementCounter() {
+void Worker::incrementCounter() {
 
     // check if renegotiation is needed
     if (m_counter == MAX_COUNTER_VALUE) {
         int res = loginRequest();
         if (res != 0)
-            return false;
+            throw -1;
         m_counter = 0;
     } else {
         m_counter++;
     }
-
-    return true;
 }
 
 int Worker::run() {
@@ -865,35 +863,40 @@ int Worker::run() {
 
         LOG("(Run) Command received: " << printCommandCodeDescription(command_code));
 
-        switch (command_code)
-        {
-            case UPLOAD_REQ:
-                uploadRequest(plaintext);
-                break;         
-                
-            case DOWNLOAD_REQ:
-                downloadRequest(plaintext);
-                break;
-            
-            case DELETE_REQ:
-                removeRequest(plaintext);
-                break;
-                
-            case FILE_LIST_REQ:
-                listRequest(plaintext);
-                break;
+        try {
+            switch (command_code) {
 
-            case RENAME_REQ:
-                renameRequest(plaintext);
-                break;
+                case UPLOAD_REQ:
+                    uploadRequest(plaintext);
+                    break;         
+                    
+                case DOWNLOAD_REQ:
+                    downloadRequest(plaintext);
+                    break;
+                
+                case DELETE_REQ:
+                    removeRequest(plaintext);
+                    break;
+                    
+                case FILE_LIST_REQ:
+                    listRequest(plaintext);
+                    break;
 
-            case LOGOUT_REQ:
-                logoutRequest(plaintext);
-                return 0;   
-            
-            default:
-                cerr << "[-] (Run) Invalid command received" << endl;
-                break;
+                case RENAME_REQ:
+                    renameRequest(plaintext);
+                    break;
+
+                case LOGOUT_REQ:
+                    logoutRequest(plaintext);
+                    return 0;   
+                
+                default:
+                    cerr << "[-] (Run) Invalid command received" << endl;
+                    break;
+            }
+        } catch (int e) {
+            cerr << "[-] (Run) Renegotiation failed" << endl;
+            return -3;
         }
     }
 

@@ -1,7 +1,7 @@
 # To Do List
 
 * creare il .h per le define e il .h per gli error code
-* controllare la funzione che incrementa il counter e gestisce l'overflow
+* controllare se l'increment counter è posizionato bene
 * come gestiamo il controllo del counter? (GOTO)
 * cancellare print commentate
 * Sistemare lo script di test
@@ -12,3 +12,4 @@ la deserializzazione del pacchetto che potrebbe fallire se il command_code è di
 * se nel logout si invia sempre il REQ_SUCCESS, che senso ha dato che il TCP ha l'ack automatico?
 * upper cammel usato in tutti i pacchetti
 * sanitizzare path con ..
+* decidere se fare una cartella download in locale

@@ -33,7 +33,7 @@ class Client {
     int rename();
     int remove();
 
-    bool incrementCounter();
+    void incrementCounter();
 
 public:
     Client(bool verbose);

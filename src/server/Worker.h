@@ -23,7 +23,7 @@ class Worker {
     int renameRequest(uint8_t* plaintext);
     int removeRequest(uint8_t* plaintext);
 
-    bool incrementCounter();
+    void incrementCounter();
 
 public:
     Worker(CommunicationSocket* socket, bool verbose);

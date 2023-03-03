@@ -1000,18 +1000,16 @@ int Client::remove() {
 
 // ------------------------------------------------------------------------------
 
-bool Client::incrementCounter() {
+void Client::incrementCounter() {
 
     // check if renegotiation is needed
     if (m_counter == MAX_COUNTER_VALUE) {
         int res = login();
         if (res != 0)
-            return false;
+            throw -1;
     } else {
         m_counter++;
     }
-
-    return true;
 }
 
 int Client::run() {
@@ -1074,110 +1072,114 @@ int Client::run() {
     }
     cout << "[+] (Run) Login completed" << endl;
 
-    while (1) {
-        
-        string command;
-        cout << "Insert next command: ";
-        cin >> command;
+    try {
+        while (1) {
+            
+            string command;
+            cout << "Insert next command: ";
+            cin >> command;
 
-        if (command == "list") {
-            res = list();
-            if (res < 0) {
-                cerr << "[-] (Run) List failed with error code " << res << endl;
-                return -1;
-            } 
-
-            cout << "[+] (Run) List completed" << endl;
-        }
-
-        else if (command == "download") {
-
-            string file_name;
-            cout << "File to download: ";
-            cin >> file_name;
-
-            if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-                cerr << "[-] (Run) Invalid filename" << endl;
-                continue;
-            }
-
-            res = download(file_name);
-            if (res < 0) {
-                cerr << "[-] (Run) Download failed with error code " << res << endl;
-            } else {
-                cout << "[+] (Run) Download completed successfully" << endl;
-            }
-        }
-
-        else if (command == "upload") {
-            // get the file name
-            string file_name;
-            cout << "Insert the name of the file: ";
-            cin >> file_name;
-
-            // sanitize filename
-            if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-                cerr << "[-] (Run) Not valid file name" << endl;
-                continue;
-            }
-
-            res = upload(file_name);
-        }
-
-        else if (command == "rename") {
-            res = rename();
-            if (res < 0) {
-                if (res < -1){
-                    cerr << "[-] (Run) Rename failed with error code " << res << endl;
+            if (command == "list") {
+                res = list();
+                if (res < 0) {
+                    cerr << "[-] (Run) List failed with error code " << res << endl;
                     return -1;
+                } 
+
+                cout << "[+] (Run) List completed" << endl;
+            }
+
+            else if (command == "download") {
+
+                string file_name;
+                cout << "File to download: ";
+                cin >> file_name;
+
+                if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
+                    cerr << "[-] (Run) Invalid filename" << endl;
+                    continue;
+                }
+
+                res = download(file_name);
+                if (res < 0) {
+                    cerr << "[-] (Run) Download failed with error code " << res << endl;
+                } else {
+                    cout << "[+] (Run) Download completed successfully" << endl;
                 }
             }
-            else
-                cout << "[+] (Run) Rename completed" << endl;
-        }
 
-        else if (command == "delete") {
-            res = remove();
-            if (res < 0) {
-                if (res < -1){
-                    cerr << "[-] (Run) Remove failed with error code " << res << endl;
-                    return -1;
+            else if (command == "upload") {
+                // get the file name
+                string file_name;
+                cout << "Insert the name of the file: ";
+                cin >> file_name;
+
+                // sanitize filename
+                if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
+                    cerr << "[-] (Run) Not valid file name" << endl;
+                    continue;
                 }
+
+                res = upload(file_name);
             }
-            else
-                cout << "[+] (Run) Remove completed" << endl;
-        }
 
-        else if (command == "logout" || command == "exit") {
-            res = logout();
-            if (res < 0) {
-                cerr << "[-] (Run) Logout failed with error code " << res << endl;
-                return -1;
+            else if (command == "rename") {
+                res = rename();
+                if (res < 0) {
+                    if (res < -1){
+                        cerr << "[-] (Run) Rename failed with error code " << res << endl;
+                        return -1;
+                    }
+                }
+                else
+                    cout << "[+] (Run) Rename completed" << endl;
+            }
+
+            else if (command == "delete") {
+                res = remove();
+                if (res < 0) {
+                    if (res < -1){
+                        cerr << "[-] (Run) Remove failed with error code " << res << endl;
+                        return -1;
+                    }
+                }
+                else
+                    cout << "[+] (Run) Remove completed" << endl;
+            }
+
+            else if (command == "logout" || command == "exit") {
+                res = logout();
+                if (res < 0) {
+                    cerr << "[-] (Run) Logout failed with error code " << res << endl;
+                    return -1;
+                } 
+
+                cout << "[+] (Run) Logout completed" << endl;
+
+                if (command == "exit") 
+                    return 1;
+                return 0;
+            }
+            
+            else if (command == "help") {
+                cout << "----------- COMMANDS -----------" << endl;
+                cout << "list" << endl;
+                cout << "download" << endl;
+                cout << "upload" << endl;
+                cout << "rename" << endl;
+                cout << "delete" << endl;
+                cout << "logout" << endl;
+                cout << "exit" << endl;
+                cout << "--------------------------------" << endl;
             } 
-
-            cout << "[+] (Run) Logout completed" << endl;
-
-            if (command == "exit") 
-                return 1;
-            return 0;
+            
+            else {
+                cerr << "[-] (Run) Not valid command" << endl;
+            } 
         }
-        
-        else if (command == "help") {
-            cout << "----------- COMMANDS -----------" << endl;
-            cout << "list: " << endl;
-            cout << "download:" << endl;
-            cout << "upload:" << endl;
-            cout << "rename:" << endl;
-            cout << "delete:" << endl;
-            cout << "logout:" << endl;
-            cout << "exit:" << endl;
-            cout << "--------------------------------" << endl;
-        }
-
-        else {
-            cerr << "[-] (Run) Not valid command" << endl;
-        }
-        
+    } catch (int e) {
+        cerr << "[-] (Run) Renegotiation failed" << endl;
+        return -1;
     }
 
     return 0;
