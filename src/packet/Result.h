@@ -8,6 +8,7 @@
 #include <openssl/rand.h>
 
 #include "./CommandCodes.h"
+#include "./ErrorCodes.h"
 
 using namespace std;
 

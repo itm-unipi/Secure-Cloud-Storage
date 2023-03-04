@@ -423,7 +423,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     // create the result fail packet if the file exists, else create the success packet
     Result m2;
     if (file_exists)
-        m2 = Result(m_counter, false);
+        m2 = Result(m_counter, false, FILE_ALREADY_EXISTS_ERROR);
     else
         m2 = Result(m_counter, true);
     // m2.print();
