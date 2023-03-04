@@ -93,10 +93,6 @@ int AesCbc::finalizeEncrypt() {
     m_processed_bytes += update_len;
 
     EVP_CIPHER_CTX_free(m_ctx);
-    // TODO: controlla se plaintext deve essere riutilizzato e nel caso non azzerare
-#pragma optimize("", off)
-    memset(m_plaintext, 0, m_plaintext_size);
-#pragma optimize("", on)
 
     m_plaintext = nullptr;
     delete[] m_iv;

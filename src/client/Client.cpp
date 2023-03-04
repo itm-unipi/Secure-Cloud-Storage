@@ -242,7 +242,6 @@ int Client::logout() {
     serialized_packet = new uint8_t[Generic::getSize(Result::getSize())];
     res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
         return -2;
     }
@@ -609,7 +608,6 @@ int Client::list() {
     serialized_packet = new uint8_t[Generic::getSize(ListM2::getSize())];
     res = m_socket->receive(serialized_packet, Generic::getSize(ListM2::getSize()));
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
         return -2;
     }
@@ -629,13 +627,7 @@ int Client::list() {
     // get the m2 packet
     uint8_t* plaintext = nullptr;
     int plaintext_size = 0;
-    uint8_t command_code = generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
-    // check if the command code is correct TODO: va tolto?
-    if (command_code != FILE_LIST_SIZE){
-        LOG("(List) Unexpected packet");
-        safeDelete(plaintext, ListM2::getSize());
-        return -4;
-    }
+    generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     ListM2 m2 = ListM2::deserialize(plaintext);
     // m2.print();
     safeDelete(plaintext, ListM2::getSize());
@@ -650,9 +642,8 @@ int Client::list() {
     serialized_packet = new uint8_t[Generic::getSize(ListM3::getSize(m2.file_list_size))];
     res = m_socket->receive(serialized_packet, Generic::getSize(ListM3::getSize(m2.file_list_size)));
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
-        return -6;
+        return -4;
     }
 
     // deserialize the generic packet and verify the fingerprint
@@ -662,7 +653,7 @@ int Client::list() {
     verification_res = generic_m3.verifyHMAC(m_hmac_key);
     if (!verification_res) {
         LOG("(List) HMAC verification failed");
-        return -7;
+        return -5;
     }
 
     LOG("(List) Received M3 valid packet");
@@ -670,13 +661,7 @@ int Client::list() {
     // get the m3 packet
     plaintext = nullptr;
     plaintext_size = 0;
-    command_code = generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
-    // check if the command code is correct
-    if (command_code != FILE_LIST){
-        LOG("(List) Unexpected packet");
-        safeDelete(plaintext, ListM3::getSize(m2.file_list_size));
-        return -8;
-    }
+    generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     ListM3 m3 = ListM3::deserialize(plaintext, plaintext_size);
     // m3.print();
     safeDelete(plaintext, ListM3::getSize(m2.file_list_size));
@@ -733,7 +718,6 @@ int Client::rename(string file_name, string new_file_name) {
     serialized_packet = new uint8_t[Generic::getSize(Result::getSize())];
     res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
         return -2;
     }
@@ -815,7 +799,6 @@ int Client::remove(string file_name) {
     serialized_packet = new uint8_t[Generic::getSize(Result::getSize())];
     res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
         return -2;
     }
@@ -888,6 +871,9 @@ int Client::run() {
     cout << "Insert password: ";
     cin >> password;
     
+    if (m_username.length() == 0 || password.length() == 0)
+        return 1;
+
     // sanitize username and password
     static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.@?!#*";
     if (strspn(m_username.c_str(), ok_chars) < strlen(m_username.c_str())) { 
@@ -946,6 +932,12 @@ int Client::run() {
             string command;
             cout << "Insert next command: ";
             cin >> command;
+
+            // needed in case of SIGINT
+            if (command.length() == 0) {
+                logout();
+                return 1;
+            }
 
             if (command == "list") {
                 res = list();

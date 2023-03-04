@@ -54,6 +54,9 @@ int CommunicationSocket::receive(uint8_t* output_buffer, int output_buffer_size)
     if (ret <= 0) {
         cerr << "[-] (CommunicationSocket) Failed to receive a message" << endl;
         return -1;
+    } else if (ret != output_buffer_size) {
+        cerr << "[-] (CommunicationSocket) Received a message with unexpected size" << endl;
+        return -1;
     }
 
     return 0;

@@ -11,6 +11,7 @@ void clientSignalHandler(int signum) {
     switch (signum) {
 
         case SIGINT:
+            cout << "\nExited" << endl;
             throw -3;
         
         case SIGPIPE:
@@ -30,7 +31,7 @@ int main(int argc, char** argv) {
     }
 
     // register the signal handler for SIGINT and SIGPIPE
-    // signal(SIGINT, clientSignalHandler);
+    signal(SIGINT, clientSignalHandler);
     signal(SIGPIPE, clientSignalHandler);
 
     while (1) {

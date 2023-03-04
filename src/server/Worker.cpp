@@ -42,7 +42,6 @@ int Worker::loginRequest() {
     uint8_t* serialized_packet = new uint8_t[LoginM1::getSize()];
     int res = m_socket->receive(serialized_packet, LoginM1::getSize());
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
         return -1;
     }
@@ -73,7 +72,6 @@ int Worker::loginRequest() {
     res = m_socket->send(serialized_packet, LoginM2::getSize());
     delete[] serialized_packet;
     if (res < 0) {
-        // TODO: errore + delete
         EVP_PKEY_free(user_public_key);
         return -2;
     }
@@ -90,13 +88,11 @@ int Worker::loginRequest() {
     file_name = "resources/private_keys/server_key.pem";
     bp = BIO_new_file(file_name.c_str(), "r");
     if (!bp) {
-        // TODO: errore + delete
         return -4;
     }
     EVP_PKEY* private_key = PEM_read_bio_PrivateKey(bp, NULL, NULL, NULL);
     BIO_free(bp); 
     if (!private_key) {
-        // TODO: errore + delete
         EVP_PKEY_free(user_public_key);
         return -5;
     }
@@ -149,7 +145,6 @@ int Worker::loginRequest() {
     res = DiffieHellman::serializeKey(ephemeral_key, serialized_ephemeral_key, serialized_ephemeral_key_size);
     EVP_PKEY_free(ephemeral_key);
     if (res < 0) {
-        // TODO: errore + delete
         EVP_PKEY_free(private_key);
         delete[] serialized_certificate;
         delete[] serialized_ephemeral_key;
@@ -188,7 +183,6 @@ int Worker::loginRequest() {
     delete[] ciphertext;
     delete[] iv;
     if (res < 0) {
-        // TODO: errore + delete
         EVP_PKEY_free(user_public_key);
         delete[] ephemeral_keys_buffer;
         return -8;
@@ -200,7 +194,6 @@ int Worker::loginRequest() {
     serialized_packet = new uint8_t[LoginM4::getSize()];
     res = m_socket->receive(serialized_packet, LoginM4::getSize());
     if (res < 0) {
-        // TODO: errore + delete
         delete[] serialized_packet;
         EVP_PKEY_free(user_public_key);
         delete[] ephemeral_keys_buffer;
@@ -773,7 +766,6 @@ int Worker::run() {
         uint8_t* serialized_packet = new uint8_t[Generic::getSize(COMMAND_FIELD_PACKET_SIZE)];
         int res = m_socket->receive(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
         if (res < 0) {
-            // TODO: errore + delete
             delete[] serialized_packet;
             return -2;
         }
