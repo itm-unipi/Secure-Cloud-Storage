@@ -16,10 +16,10 @@ using namespace std;
 
 struct Generic {
 
-    uint8_t iv[16];
+    uint8_t iv[AES_BLOCK_SIZE];
     uint8_t* ciphertext;
     int ciphertext_size;
-    uint8_t hmac[32];
+    uint8_t hmac[HMAC_DIGEST_SIZE];
 
     Generic() { ciphertext = nullptr; }
 
@@ -29,19 +29,19 @@ struct Generic {
         AesCbc encryptor(ENCRYPT, session_key);
         unsigned char* iv = nullptr;
         encryptor.run(plaintext, plaintext_size, ciphertext, ciphertext_size, iv);
-        memcpy(this->iv, iv, 16 * sizeof(uint8_t));
+        memcpy(this->iv, iv, AES_BLOCK_SIZE * sizeof(uint8_t));
         delete[] iv;
 
         // concatenate IV and ciphertext
-        uint8_t* buffer = new uint8_t[(16 + ciphertext_size) * sizeof(uint8_t)];
-        memcpy(buffer, this->iv, 16 * sizeof(uint8_t));
-        memcpy(buffer + (16 * sizeof(uint8_t)), ciphertext, ciphertext_size * sizeof(uint8_t));
+        uint8_t* buffer = new uint8_t[(AES_BLOCK_SIZE + ciphertext_size) * sizeof(uint8_t)];
+        memcpy(buffer, this->iv, AES_BLOCK_SIZE * sizeof(uint8_t));
+        memcpy(buffer + (AES_BLOCK_SIZE * sizeof(uint8_t)), ciphertext, ciphertext_size * sizeof(uint8_t));
 
         // generate the HMAC
         Hmac hmac(hmac_key);
         unsigned char* digest = nullptr;
         unsigned int digest_size = 0;
-        hmac.generate(buffer, (16 + ciphertext_size) * sizeof(uint8_t), digest, digest_size);
+        hmac.generate(buffer, (AES_BLOCK_SIZE + ciphertext_size) * sizeof(uint8_t), digest, digest_size);
         memcpy(this->hmac, digest, digest_size * sizeof(uint8_t));
 
         delete[] digest;
@@ -53,13 +53,13 @@ struct Generic {
     bool verifyHMAC(unsigned char* key) {
 
         // concatenate IV and ciphertext
-        uint8_t* buffer = new uint8_t[(16 + ciphertext_size) * sizeof(uint8_t)];
-        memcpy(buffer, iv, 16 * sizeof(uint8_t));
-        memcpy(buffer + (16 * sizeof(uint8_t)), ciphertext, ciphertext_size * sizeof(uint8_t));
+        uint8_t* buffer = new uint8_t[(AES_BLOCK_SIZE + ciphertext_size) * sizeof(uint8_t)];
+        memcpy(buffer, iv, AES_BLOCK_SIZE * sizeof(uint8_t));
+        memcpy(buffer + (AES_BLOCK_SIZE * sizeof(uint8_t)), ciphertext, ciphertext_size * sizeof(uint8_t));
 
         // verify the HMAC
         Hmac hmac(key);
-        bool res = hmac.verify(buffer, (16 + ciphertext_size) * sizeof(uint8_t), this->hmac, 32 * sizeof(uint8_t));
+        bool res = hmac.verify(buffer, (AES_BLOCK_SIZE + ciphertext_size) * sizeof(uint8_t), this->hmac, HMAC_DIGEST_SIZE * sizeof(uint8_t));
 
         delete[] buffer;
         return res;
@@ -80,17 +80,17 @@ struct Generic {
 
     uint8_t* serialize() const {
 
-        int buffer_size = (16 + ciphertext_size + 32) * sizeof(uint8_t);
+        int buffer_size = (AES_BLOCK_SIZE + ciphertext_size + HMAC_DIGEST_SIZE) * sizeof(uint8_t);
         uint8_t* buffer = new uint8_t[buffer_size];
 
         size_t position = 0;
-        memcpy(buffer, iv, 16 * sizeof(uint8_t));
-        position += 16 * sizeof(uint8_t);
+        memcpy(buffer, iv, AES_BLOCK_SIZE * sizeof(uint8_t));
+        position += AES_BLOCK_SIZE * sizeof(uint8_t);
 
         memcpy(buffer + position, ciphertext, ciphertext_size * sizeof(uint8_t));
         position += ciphertext_size * sizeof(uint8_t);
 
-        memcpy(buffer + position, hmac, 32 * sizeof(uint8_t));
+        memcpy(buffer + position, hmac, HMAC_DIGEST_SIZE * sizeof(uint8_t));
 
         return buffer;
     }
@@ -98,17 +98,17 @@ struct Generic {
     static Generic deserialize(uint8_t* buffer, int buffer_size) {
 
         Generic genericPacket;
-        genericPacket.ciphertext_size = buffer_size - ((16 + 32) * sizeof(uint8_t));
+        genericPacket.ciphertext_size = buffer_size - ((AES_BLOCK_SIZE + HMAC_DIGEST_SIZE) * sizeof(uint8_t));
 
         size_t position = 0;
-        memcpy(genericPacket.iv, buffer, 16 * sizeof(uint8_t));
-        position += 16 * sizeof(uint8_t);
+        memcpy(genericPacket.iv, buffer, AES_BLOCK_SIZE * sizeof(uint8_t));
+        position += AES_BLOCK_SIZE * sizeof(uint8_t);
 
         genericPacket.ciphertext = new uint8_t[genericPacket.ciphertext_size];
         memcpy(genericPacket.ciphertext, buffer + position, genericPacket.ciphertext_size * sizeof(uint8_t));
         position += genericPacket.ciphertext_size * sizeof(uint8_t);
 
-        memcpy(genericPacket.hmac, buffer + position, 32 * sizeof(uint8_t));
+        memcpy(genericPacket.hmac, buffer + position, HMAC_DIGEST_SIZE * sizeof(uint8_t));
 
         return genericPacket;
     }
@@ -116,13 +116,13 @@ struct Generic {
     static int getSize(int plaintext_size) {
 
         // calculate the ciphertext size
-        int ciphertext_size = plaintext_size + (16 - (plaintext_size % 16));
+        int ciphertext_size = plaintext_size + (AES_BLOCK_SIZE - (plaintext_size % AES_BLOCK_SIZE));
 
         int size = 0;
 
-        size += 16 * sizeof(uint8_t);
+        size += AES_BLOCK_SIZE * sizeof(uint8_t);
         size += ciphertext_size * sizeof(uint8_t);
-        size += 32 * sizeof(uint8_t);
+        size += HMAC_DIGEST_SIZE * sizeof(uint8_t);
 
         return size;
     }
@@ -131,7 +131,7 @@ struct Generic {
 
         cout << "------- GENERIC PACKET -------" << endl;
         cout << "IV: ";
-        for (int i = 0; i < 16; ++i)
+        for (int i = 0; i < AES_BLOCK_SIZE; ++i)
             cout << hex << (int)iv[i];
         cout << dec << endl;
         cout << "CIPHERTEXT (first 10 bytes): ";
@@ -139,7 +139,7 @@ struct Generic {
             cout << hex << (int)ciphertext[i];
         cout << dec << endl;  
         cout << "HMAC: ";
-        for (int i = 0; i < 32; ++i)
+        for (int i = 0; i < HMAC_DIGEST_SIZE; ++i)
             cout << hex << (int)hmac[i];
         cout << dec << endl;        
         cout << "------------------------------" << endl;

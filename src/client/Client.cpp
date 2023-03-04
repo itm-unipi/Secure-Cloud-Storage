@@ -132,8 +132,8 @@ int Client::login() {
     unsigned char* keys = nullptr;
     unsigned int keys_size;
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
-    memcpy(m_session_key, keys, 32 * sizeof(unsigned char));
-    memcpy(m_hmac_key, keys + (32 * sizeof(unsigned char)), 32 * sizeof(unsigned char));
+    memcpy(m_session_key, keys, AES_KEY_SIZE * sizeof(unsigned char));
+    memcpy(m_hmac_key, keys + (HMAC_DIGEST_SIZE * sizeof(unsigned char)), HMAC_DIGEST_SIZE * sizeof(unsigned char));
     #pragma optimize("", off)
     memset(shared_secret, 0, shared_secret_size);
     #pragma optimize("", on)
