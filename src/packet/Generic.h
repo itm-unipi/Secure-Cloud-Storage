@@ -1,8 +1,6 @@
 #ifndef _GENERICPACKET_H
 #define _GENERICPACKET_H
 
-#define MAX_COUNTER_VALUE 0xffffffff
-
 #include <iostream>
 #include <string>
 #include <cstdint>

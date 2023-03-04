@@ -1,7 +1,9 @@
 #include <iostream>
 #include <cmath>
 #include <exception>
+
 #include "FileManager.h"
+#include "../../resources/Config.h"
 
 FileManager::FileManager(string file_name, uint8_t open_type) {
 

@@ -1,10 +1,6 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 
-#define SERVER_IP "localhost"
-#define SERVER_PORT 6000
-#define MAX_QUEUE 10
-
 #include <vector>
 #include <thread>
 #include "../utility/ListeningSocket.h"

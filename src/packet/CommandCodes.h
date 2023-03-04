@@ -20,8 +20,6 @@ using namespace std;
 #define RENAME_REQ      12
 #define LOGOUT_REQ      13 
 
-#define COMMAND_FIELD_PACKET_SIZE 65 * sizeof(uint8_t)          // the longest command packet is the Rename Command (65 byte)
-
 string printCommandCodeDescription(uint8_t code) {
 
     switch (code){

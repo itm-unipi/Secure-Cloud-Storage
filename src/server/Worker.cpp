@@ -404,7 +404,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
 
     // get the M1 packet
     UploadM1 m1 = UploadM1::deserialize(plaintext);
-    m1.print();
+    // m1.print();
     #pragma optimize("", off)
     memset(plaintext, 0, COMMAND_FIELD_PACKET_SIZE);
     #pragma optimize("", on)

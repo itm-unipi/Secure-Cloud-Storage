@@ -9,6 +9,7 @@
 
 #include "../security/CertificateStore.h"
 #include "../client/Client.h"
+#include "../../resources/Config.h"
 
 using namespace std;
 

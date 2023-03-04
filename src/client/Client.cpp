@@ -460,7 +460,7 @@ int Client::upload(string file_name) {
 
     // create the M1 packet
     UploadM1 m1(m_counter, file_name, file.getFileSize());
-    m1.print();
+    // m1.print();
     uint8_t* serialized_packet = m1.serialize();
 
     // create generic packet

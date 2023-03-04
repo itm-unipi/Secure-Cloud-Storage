@@ -2,6 +2,7 @@
 
 #include "Server.h"
 #include "Worker.h"
+#include "../../resources/Config.h"
 #include "../security/CertificateStore.h"
 
 using namespace std;
