@@ -5,10 +5,10 @@ CFLAGS = -Wall -c -std=c++17 -Wno-unknown-pragmas -Wno-deprecated-declarations
 all: server client
 
 server: Server.o Socket.o DiffieHellman.o Sha512.o CertificateStore.o DigitalSignature.o AesCbc.o Hmac.o FileManager.o
-	$(CC) -DSERVER_APPLICATION -o bin/server bin/Server.o bin/Worker.o bin/ListeningSocket.o bin/CommunicationSocket.o bin/DiffieHellman.o bin/Sha512.o bin/CertificateStore.o bin/DigitalSignature.o bin/AesCbc.o bin/Hmac.o bin/FileManager.o src/Main.cpp $(LFLAGS)
+	$(CC) -o bin/server bin/Server.o bin/Worker.o bin/ListeningSocket.o bin/CommunicationSocket.o bin/DiffieHellman.o bin/Sha512.o bin/CertificateStore.o bin/DigitalSignature.o bin/AesCbc.o bin/Hmac.o bin/FileManager.o src/server/Main.cpp $(LFLAGS)
 
 client: Client.o Socket.o DiffieHellman.o Sha512.o CertificateStore.o DigitalSignature.o AesCbc.o Hmac.o FileManager.o
-	$(CC) -DCLIENT_APPLICATION -o bin/client bin/Client.o bin/CommunicationSocket.o bin/DiffieHellman.o bin/Sha512.o bin/CertificateStore.o bin/DigitalSignature.o bin/AesCbc.o bin/Hmac.o bin/FileManager.o src/Main.cpp $(LFLAGS)
+	$(CC) -o bin/client bin/Client.o bin/CommunicationSocket.o bin/DiffieHellman.o bin/Sha512.o bin/CertificateStore.o bin/DigitalSignature.o bin/AesCbc.o bin/Hmac.o bin/FileManager.o src/client/Main.cpp $(LFLAGS)
 
 test: aesCbcTest fileManagerTest sha512test hmacTest signatureTest certificateTest diffieHellmanTest socketTest
 
