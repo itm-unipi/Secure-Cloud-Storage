@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <exception>
+#include <cstring>
 
 #include "FileManager.h"
 #include "../../resources/Config.h"
@@ -94,4 +95,27 @@ bool FileManager::exists(string file_name) {
     if (!indata.is_open())
         return false;
     return true;
+}
+
+
+int FileManager::sanitizeFileName(string file_name) {
+
+    // compare string with the characters in the whitelist
+    char whitelist[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.@?!#*";
+    if (strspn(file_name.c_str(), whitelist) < strlen(file_name.c_str()))
+        return -1;
+
+    // check if the file name is '.'
+    if (file_name == ".") 
+        return -2;
+
+    // check if the file name is '..'
+    if (file_name == "..")
+        return -3;
+
+    // check if the file name is too long
+    if (file_name.length() >= FILE_NAME_SIZE)
+        return -4;
+
+    return 0;
 }

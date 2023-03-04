@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
+#include <filesystem>
 #include <openssl/pem.h>
 
 #include "Client.h"
@@ -964,8 +965,19 @@ int Client::run() {
                 cout << "File to download: ";
                 cin >> file_name;
 
-                if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-                    cerr << "[-] (Run) Invalid filename" << endl;
+                // sanitize filename
+                res = FileManager::sanitizeFileName(file_name);
+                if (res == -1) {
+                    cerr << "[-] (Run) Invalid file name" << endl;
+                    continue;
+                } else if (res == -2) {
+                    cerr << "[-] (Run) The file name can't be '.'" << endl;
+                    continue;
+                } else if (res == -3) {
+                    cerr << "[-] (Run) The file name can't be '..'" << endl;
+                    continue;
+                } else if (res == -4) {
+                    cerr << "[-] (Run) The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
 
@@ -984,8 +996,24 @@ int Client::run() {
                 cin >> file_name;
 
                 // sanitize filename
-                if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-                    cerr << "[-] (Run) Not valid file name" << endl;
+                res = FileManager::sanitizeFileName(file_name);
+                if (res == -1) {
+                    cerr << "[-] (Run) Invalid file name" << endl;
+                    continue;
+                } else if (res == -2) {
+                    cerr << "[-] (Run) The file name can't be '.'" << endl;
+                    continue;
+                } else if (res == -3) {
+                    cerr << "[-] (Run) The file name can't be '..'" << endl;
+                    continue;
+                } else if (res == -4) {
+                    cerr << "[-] (Run) The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
+                    continue;
+                }
+
+                // check if the path isn't a regular file (folder, symlink, ecc...)
+                if (!filesystem::is_regular_file(filesystem::path(file_name))) {
+                    cerr << "[-] (Run) The file name doesn't correspond to a regular file" << endl;
                     continue;
                 }
 
@@ -1000,23 +1028,38 @@ int Client::run() {
                 cout << "Insert new file name: ";
                 cin >> new_file_name;
                 
-                // sanitize file_name and new_file_name
-                if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-                    cerr << "[-] (Rename) Not valid file_name" << endl;
+                // sanitize file_name
+                res = FileManager::sanitizeFileName(file_name);
+                if (res == -1) {
+                    cerr << "[-] (Run) Invalid file name" << endl;
+                    continue;
+                } else if (res == -2) {
+                    cerr << "[-] (Run) The file name can't be '.'" << endl;
+                    continue;
+                } else if (res == -3) {
+                    cerr << "[-] (Run) The file name can't be '..'" << endl;
+                    continue;
+                } else if (res == -4) {
+                    cerr << "[-] (Run) The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
-                if (strspn(new_file_name.c_str(), ok_chars) < strlen(new_file_name.c_str())) { 
-                    cerr << "[-] (Rename) Not valid new_file_name" << endl;
+                
+                // sanitize new_file_name
+                res = FileManager::sanitizeFileName(new_file_name);
+                if (res == -1) {
+                    cerr << "[-] (Run) Invalid new file name" << endl;
+                    continue;
+                } else if (res == -2) {
+                    cerr << "[-] (Run) The new file name can't be '.'" << endl;
+                    continue;
+                } else if (res == -3) {
+                    cerr << "[-] (Run) The new file name can't be '..'" << endl;
+                    continue;
+                } else if (res == -4) {
+                    cerr << "[-] (Run) The new file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
-                if (file_name.length() >= FILE_NAME_SIZE) {
-                    cerr << "[-] (Rename) File name too long" << endl;
-                    continue;
-                } 
-                if (new_file_name.length() >= FILE_NAME_SIZE) {
-                    cerr << "[-] (Rename) New file name too long" << endl;
-                    continue;
-                } 
+                
                 if(file_name == new_file_name) {
                     cerr << "[-] (Rename) File name and new file name can't be equal" << endl;
                     continue;
@@ -1038,14 +1081,20 @@ int Client::run() {
                 cin >> file_name;
                 
                 // sanitize file_name
-                if (strspn(file_name.c_str(), ok_chars) < strlen(file_name.c_str())) { 
-                    cerr << "[-] (Remove) Not valid file_name" << endl;
+                res = FileManager::sanitizeFileName(file_name);
+                if (res == -1) {
+                    cerr << "[-] (Run) Invalid file name" << endl;
+                    continue;
+                } else if (res == -2) {
+                    cerr << "[-] (Run) The file name can't be '.'" << endl;
+                    continue;
+                } else if (res == -3) {
+                    cerr << "[-] (Run) The file name can't be '..'" << endl;
+                    continue;
+                } else if (res == -4) {
+                    cerr << "[-] (Run) The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
-                if (file_name.length() >= FILE_NAME_SIZE) {
-                    cerr << "[-] (Remove) File name too long" << endl;
-                    continue;
-                } 
     
                 res = remove(file_name);
                 if (res < -1) {

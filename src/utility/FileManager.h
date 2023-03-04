@@ -32,6 +32,7 @@ public:
     void calculateFileInfo(size_t size);
 
     static bool exists(string file_name);
+    static int sanitizeFileName(string file_name);
 };
 
 #endif  // _FILEMANAGER_H
