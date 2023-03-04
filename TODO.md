@@ -1,6 +1,5 @@
 # To Do List
 
-* Racchiudere #pragma in una utility function
 * dividere il main
 * vedere se gli errori del logout sono numerati correttamente
 * valutare se mettere il controllo del command_code, command_code sbagliato non puo avvenire se non a causa di un reply attack, in generale se ne accorgerebbe l'errore del counter ma tale errore verrebbe scoperto solo dopo

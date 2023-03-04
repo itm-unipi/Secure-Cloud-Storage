@@ -17,9 +17,9 @@ AesCbc::AesCbc(uint8_t type, unsigned char* key) {
 
 AesCbc::~AesCbc() {
     
-#pragma optimize("", off)
+    #pragma optimize("", off)
     memset(m_key, 0, AES_KEY_SIZE);
-#pragma optimize("", on)
+    #pragma optimize("", on)
     delete[] m_key;
 }
 

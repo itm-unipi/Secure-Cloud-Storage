@@ -11,9 +11,9 @@ Hmac::Hmac(unsigned char* key) {
 
 Hmac::~Hmac() {
 
-#pragma optimize("", off)
+    #pragma optimize("", off)
     memset(m_key, 0, HMAC_DIGEST_SIZE);
-#pragma optimize("", on)
+    #pragma optimize("", on)
     delete[] m_key;
 }
 

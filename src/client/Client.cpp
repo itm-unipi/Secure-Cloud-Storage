@@ -120,10 +120,7 @@ int Client::login() {
     EVP_PKEY_free(ephemeral_key);
     EVP_PKEY_free(peer_ephemeral_key);
     if (res < 0) {
-        #pragma optimize("", off)
-        memset(shared_secret, 0, shared_secret_size);
-        #pragma optimize("", on)
-        delete[] shared_secret;
+        safeDelete(shared_secret, shared_secret_size);
         delete[] serialized_ephemeral_key;
         return -6;
     }
@@ -134,10 +131,7 @@ int Client::login() {
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
     memcpy(m_session_key, keys, AES_KEY_SIZE * sizeof(unsigned char));
     memcpy(m_hmac_key, keys + (HMAC_DIGEST_SIZE * sizeof(unsigned char)), HMAC_DIGEST_SIZE * sizeof(unsigned char));
-    #pragma optimize("", off)
-    memset(shared_secret, 0, shared_secret_size);
-    #pragma optimize("", on)
-    delete[] shared_secret;
+    safeDelete(shared_secret, shared_secret_size);
     delete[] keys;
 
     LOG("(Login) Generated session key and HMAC key");
@@ -230,10 +224,7 @@ int Client::logout() {
 
     // create generic packet
     Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", off)
-    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", on)
-    delete[] serialized_packet;
+    safeDelete(serialized_packet, COMMAND_FIELD_PACKET_SIZE);
     // generic_m1.print();
 
     // 1.) send generic packet
@@ -273,10 +264,7 @@ int Client::logout() {
     generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     Result m2 = Result::deserialize(plaintext);
     // m2.print();
-    #pragma optimize("", off)
-    memset(plaintext, 0, Result::getSize());
-    #pragma optimize("", on)
-    delete[] plaintext;
+    safeDelete(plaintext, Result::getSize());
 
     // check if the counter is correct
     if (m2.counter != m_counter)
@@ -306,10 +294,7 @@ int Client::download(string file_name) {
     uint8_t* serialized_packet = m1.serialize();
 
     Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", off)
-    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", on)
-    delete[] serialized_packet;
+    safeDelete(serialized_packet, COMMAND_FIELD_PACKET_SIZE);
 
     serialized_packet = generic_m1.serialize();
     int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
@@ -345,10 +330,7 @@ int Client::download(string file_name) {
     generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     DownloadM2 m2 = DownloadM2::deserialize(plaintext);
     // m2.print();
-    #pragma optimize("", off)
-    memset(plaintext, 0, DownloadM2::getSize());
-    #pragma optimize("", on)
-    delete[] plaintext;
+    safeDelete(plaintext, DownloadM2::getSize());
 
     // check if the counter is correct
     if (m2.counter != m_counter)
@@ -401,11 +383,7 @@ int Client::download(string file_name) {
         generic_mi.decryptCiphertext(m_session_key, plaintext, plaintext_size);
         DownloadMi mi = DownloadMi::deserialize(plaintext, chunk_size);
         // mi.print(chunk_size);
-
-        #pragma optimize("", off)
-        memset(plaintext, 0, DownloadMi::getSize(chunk_size));
-        #pragma optimize("", on)
-        delete[] plaintext;
+        safeDelete(plaintext, DownloadMi::getSize(chunk_size));
 
         // check if the counter is correct
         if (mi.counter != m_counter)
@@ -465,10 +443,7 @@ int Client::upload(string file_name) {
 
     // create generic packet
     Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", off)
-    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", on)
-    delete[] serialized_packet;
+    safeDelete(serialized_packet, COMMAND_FIELD_PACKET_SIZE);
     // generic_m1.print();
 
     // 1.) send generic packet
@@ -505,10 +480,7 @@ int Client::upload(string file_name) {
     generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     Result m2 = Result::deserialize(plaintext);
     // m2.print();
-    #pragma optimize("", off)
-    memset(plaintext, 0, Result::getSize());
-    #pragma optimize("", on)
-    delete[] plaintext;
+    safeDelete(plaintext, Result::getSize());
 
     // check if the counter is correct
     if (m2.counter != m_counter)
@@ -543,10 +515,7 @@ int Client::upload(string file_name) {
 
         // create generic packet
         Generic generic_mi(m_session_key, m_hmac_key, serialized_packet, UploadMi::getSize(chunk_size));
-        #pragma optimize("", off)
-        memset(serialized_packet, 0, UploadMi::getSize(chunk_size));
-        #pragma optimize("", on)
-        delete[] serialized_packet;
+        safeDelete(serialized_packet, UploadMi::getSize(chunk_size));
         // generic_mi.print();
 
         // 3.) send generic packet
@@ -570,10 +539,7 @@ int Client::upload(string file_name) {
     }
 
     // clean the buffer
-    #pragma optimize("", off)
-    memset(chunk_buffer, 0, chunk_size);
-    #pragma optimize("", on)
-    delete[] chunk_buffer;
+    safeDelete(chunk_buffer, chunk_size);
 
     // 4.) receive the M4 packet
     serialized_packet = new uint8_t[Generic::getSize(UploadMn::getSize())];
@@ -599,10 +565,7 @@ int Client::upload(string file_name) {
     generic_mn.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     UploadMn mn = UploadMn::deserialize(plaintext);
     // mn.print();
-    #pragma optimize("", off)
-    memset(plaintext, 0, UploadMn::getSize());
-    #pragma optimize("", on)
-    delete[] plaintext;
+    safeDelete(plaintext, UploadMn::getSize());
 
     // check if the counter is correct
     if (mn.counter != m_counter)
@@ -630,10 +593,7 @@ int Client::list() {
 
     // create generic packet
     Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", off)
-    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", on)
-    delete[] serialized_packet;
+    safeDelete(serialized_packet, COMMAND_FIELD_PACKET_SIZE);
     // generic_m1.print();
 
     // 1.) send generic packet
@@ -676,19 +636,12 @@ int Client::list() {
     // check if the command code is correct
     if (command_code != FILE_LIST_SIZE){
         cerr << " [-] (List) Unexpected packet" << endl;
-        #pragma optimize("", off)
-        memset(plaintext, 0, ListM2::getSize());
-        #pragma optimize("", on)
-        delete[] plaintext;
+        safeDelete(plaintext, ListM2::getSize());
         return -4;
     }
     ListM2 m2 = ListM2::deserialize(plaintext);
     // m2.print();
-
-    #pragma optimize("", off)
-    memset(plaintext, 0, ListM2::getSize());
-    #pragma optimize("", on)
-    delete[] plaintext;
+    safeDelete(plaintext, ListM2::getSize());
 
     // check if the counter is correct
     if (m2.counter != m_counter)
@@ -724,19 +677,12 @@ int Client::list() {
     // check if the command code is correct
     if (command_code != FILE_LIST){
         cerr << " [-] (List) Unexpected packet" << endl;
-        #pragma optimize("", off)
-        memset(plaintext, 0, ListM3::getSize(m2.file_list_size));
-        #pragma optimize("", on)
-        delete[] plaintext;
+        safeDelete(plaintext, ListM3::getSize(m2.file_list_size));
         return -8;
     }
     ListM3 m3 = ListM3::deserialize(plaintext, plaintext_size);
     // m3.print();
-
-    #pragma optimize("", off)
-    memset(plaintext, 0, ListM3::getSize(m2.file_list_size));
-    #pragma optimize("", on)
-    delete[] plaintext;
+    safeDelete(plaintext, ListM3::getSize(m2.file_list_size));
 
     // check if the counter is correct
     if (m3.counter != m_counter) 
@@ -771,10 +717,7 @@ int Client::rename(string file_name, string new_file_name) {
 
     // create generic packet
     Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", off)
-    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", on)
-    delete[] serialized_packet;
+    safeDelete(serialized_packet, COMMAND_FIELD_PACKET_SIZE);
     // generic_m1.print();
 
     // 1.) send generic packet
@@ -816,10 +759,7 @@ int Client::rename(string file_name, string new_file_name) {
     generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     Result m2 = Result::deserialize(plaintext);
     // m2.print();
-    #pragma optimize("", off)
-    memset(plaintext, 0, Result::getSize());
-    #pragma optimize("", on)
-    delete[] plaintext;
+    safeDelete(plaintext, Result::getSize());
 
     // check if the counter is correct
     if (m2.counter != m_counter) 
@@ -859,10 +799,7 @@ int Client::remove(string file_name) {
 
     // create generic packet
     Generic generic_m1(m_session_key, m_hmac_key, serialized_packet, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", off)
-    memset(serialized_packet, 0, COMMAND_FIELD_PACKET_SIZE);
-    #pragma optimize("", on)
-    delete[] serialized_packet;
+    safeDelete(serialized_packet, COMMAND_FIELD_PACKET_SIZE);
     // generic_m1.print();
 
     // 1.) send generic packet
@@ -904,10 +841,7 @@ int Client::remove(string file_name) {
     generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     Result m2 = Result::deserialize(plaintext);
     // m2.print();
-    #pragma optimize("", off)
-    memset(plaintext, 0, Result::getSize());
-    #pragma optimize("", on)
-    delete[] plaintext;
+    safeDelete(plaintext, Result::getSize());
 
     // check if the counter is correct
     if (m2.counter != m_counter) 
