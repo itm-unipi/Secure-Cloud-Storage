@@ -331,7 +331,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
 
     if (!file_found) {
         delete requested_file;
-        return -1;
+        return -2;
     }
     
     /*
@@ -364,7 +364,7 @@ int Worker::downloadRequest(uint8_t* plaintext) {
         delete[] serialized_packet;
         if (res < 0) {
             delete requested_file;
-            return -1;
+            return -3;
         }
 
         incrementCounter();
@@ -502,7 +502,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     res = m_socket->send(serialized_packet, Generic::getSize(UploadMn::getSize()));
     delete[] serialized_packet;
     if (res < 0) {
-        return -1;
+        return -3;
     }
 
     LOG("(UploadRequest) Sent result packet");
@@ -554,7 +554,7 @@ int Worker::listRequest(uint8_t* plaintext) {
             files.replace(files.length() - 1, 1, "");
     } else {
         cerr << "[-] Invalid Directory" << endl;
-        return -2;
+        return -1;
     }
 
     uint32_t file_list_size = 0;
@@ -584,7 +584,7 @@ int Worker::listRequest(uint8_t* plaintext) {
     int res = m_socket->send(serialized_packet, Generic::getSize(ListM2::getSize()));
     delete[] serialized_packet;
     if (res < 0) {
-        return -3;
+        return -2;
     }
 
     LOG("(ListRequest) Sent M2 packet");
@@ -607,7 +607,7 @@ int Worker::listRequest(uint8_t* plaintext) {
     res = m_socket->send(serialized_packet, Generic::getSize(ListM3::getSize(file_list_size)));
     delete[] serialized_packet;
     if (res < 0) {
-        return -4;
+        return -3;
     }
 
     LOG("(ListRequest) Sent M3 packet");
@@ -775,7 +775,7 @@ int Worker::run() {
         if (res < 0) {
             // TODO: errore + delete
             delete[] serialized_packet;
-            return -1;
+            return -2;
         }
 
         // deserialize the generic packet and verify the fingerprint
@@ -785,7 +785,7 @@ int Worker::run() {
         bool verification_res = generic_m1.verifyHMAC(m_hmac_key);
         if (!verification_res) {
             cerr << "[-] (Run) HMAC verification failed" << endl;
-            return -2;
+            return -3;
         }
 
         LOG("(Run) Received valid packet");
@@ -837,7 +837,7 @@ int Worker::run() {
             else if (e == -3)
                 cerr << "[-] (signalHandler) Socket closed unexpectedly" << endl;
             
-            return -3;
+            return -4;
         }
     }
 

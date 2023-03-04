@@ -89,7 +89,7 @@ int Client::login() {
     uint8_t result_check = LoginM2::deserialize(serialized_packet).result;
     delete[] serialized_packet;
     if (!result_check) {
-        cerr << "[-] (Login) User not exists" << endl;
+        cerr << "User not registered" << endl;
         EVP_PKEY_free(ephemeral_key);
         delete[] serialized_ephemeral_key;
         return -4;
@@ -244,7 +244,7 @@ int Client::logout() {
     if (res < 0) {
         // TODO: errore + delete
         delete[] serialized_packet;
-        return -1;
+        return -2;
     }
 
     // deserialize the generic packet and verify the fingerprint
@@ -253,8 +253,8 @@ int Client::logout() {
     // generic_m2.print();
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
-        cerr << "[-] (Logout) HMAC verification failed" << endl;
-        return -2;
+        LOG("(Logout) HMAC verification failed");
+        return -3;
     }
 
     LOG("(Logout) Received valid packet");
@@ -275,9 +275,9 @@ int Client::logout() {
     if (m2.command_code == REQ_SUCCESS)
         return 0;
     else if (m2.command_code == REQ_FAILED)
-        return -1;
+        return -4;
 
-    return -2;
+    return -5;
 }
 
 // ------------------------------------------------------------------------------
@@ -285,7 +285,7 @@ int Client::logout() {
 int Client::download(string file_name) {
 
     if (FileManager::exists(file_name)) {
-        cerr << "[-] (Download) The requested file already exists in local filesystem" << endl;
+        cerr << "The requested file already exists in local filesystem" << endl;
         return -1;
     }
 
@@ -319,7 +319,7 @@ int Client::download(string file_name) {
     delete[] serialized_packet;
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
-        cerr << "[-] (Download) HMAC verification failed" << endl;
+        LOG("(Download) HMAC verification failed");
         return -4;
     }
 
@@ -341,10 +341,8 @@ int Client::download(string file_name) {
 
     // check if the requested file has been found on the cloud
     if (m2.command_code == FILE_NOT_FOUND) {
-        LOG("(Download) File not found")
+        cerr << "File not found" << endl;
         return -5;
-    } else {
-        LOG("(Download) File found")
     }
 
     // initialize the file manager in order to create file on the file system and obtain all the info about the requested file
@@ -374,7 +372,7 @@ int Client::download(string file_name) {
         delete[] serialized_packet;
         bool verification_res = generic_mi.verifyHMAC(m_hmac_key);
         if (!verification_res) {
-            cerr << "[-] (Download) HMAC verification failed" << endl;
+            LOG("(Download) HMAC verification failed");
             return -7;
         }
         
@@ -417,7 +415,7 @@ int Client::upload(string file_name) {
 
     // check if the file exists
     if (!FileManager::exists(file_name)) {
-        cerr << "[-] (Upload) The requested file not exists in local filesystem" << endl;
+        cerr << "The requested file not exists in local filesystem" << endl;
         return -1; 
     }
 
@@ -426,14 +424,14 @@ int Client::upload(string file_name) {
 
     // check if the file size is zero
     if (file.getFileSize() == 0) {
-        cerr << "[-] (Upload) An empty file can't be uploaded" << endl;
+        cerr << "An empty file can't be uploaded" << endl;
         return -2;
     }
 
     // check if the file size is over 4G
     size_t max_size = 4UL * 1024 * 1024 * 1024;
     if (file.getFileSize() > max_size) {
-        cerr << "[-] (Upload) Is not possible to upload file larger than 4GB" << endl;
+        cerr << "Is not possible to upload file larger than 4GB" << endl;
         return -3;
     }
 
@@ -452,7 +450,7 @@ int Client::upload(string file_name) {
     int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
     delete[] serialized_packet;
     if (res < 0) {
-        return -3;
+        return -4;
     }
 
     incrementCounter();
@@ -462,7 +460,7 @@ int Client::upload(string file_name) {
     res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
     if (res < 0) {
         delete[] serialized_packet;
-        return -4;
+        return -5;
     }
 
     // deserialize the generic packet and verify the fingerprint
@@ -471,8 +469,8 @@ int Client::upload(string file_name) {
     // generic_m2.print();
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
-        cerr << "[-] (Upload) HMAC verification failed" << endl;
-        return -5;
+        LOG("(Upload) HMAC verification failed");
+        return -6;
     }
 
     // get the M2 packet
@@ -491,8 +489,8 @@ int Client::upload(string file_name) {
 
     // if the request failed stop
     if (m2.command_code == REQ_FAILED) {
-        cerr << "[-] (Upload) The file already exists in the cloud" << endl;
-        return -6;
+        cerr << "The file already exists in the cloud" << endl;
+        return -7;
     }
 
     size_t chunk_size = file.getChunkSize();
@@ -524,7 +522,7 @@ int Client::upload(string file_name) {
         int res = m_socket->send(serialized_packet, Generic::getSize(UploadMi::getSize(chunk_size)));
         delete[] serialized_packet;
         if (res < 0) {
-            return -7;
+            return -8;
         }
 
         incrementCounter();
@@ -547,7 +545,7 @@ int Client::upload(string file_name) {
     res = m_socket->receive(serialized_packet, Generic::getSize(UploadMn::getSize()));
     if (res < 0) {
         delete[] serialized_packet;
-        return -8;
+        return -9;
     }
 
     // deserialize the generic packet and verify the fingerprint
@@ -556,8 +554,8 @@ int Client::upload(string file_name) {
     // generic_mn.print();
     verification_res = generic_mn.verifyHMAC(m_hmac_key);
     if (!verification_res) {
-        cerr << "[-] (Upload) HMAC verification failed" << endl;
-        return -9;
+        LOG("(Upload) HMAC verification failed");
+        return -10;
     }
 
     // get the Mn packet
@@ -574,11 +572,9 @@ int Client::upload(string file_name) {
 
     incrementCounter();
 
-    // print the status
-    if (mn.status)
-        cout << "[+] (Upload) Upload completed" << endl;
-    else
-        cerr << "[-] (Upload) Upload failed" << endl;
+    // return the status
+    if (!mn.status)
+        return -11;
 
     return 0;
 }
@@ -624,7 +620,7 @@ int Client::list() {
     // generic_m2.print();
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
-        cerr << "[-] (List) HMAC verification failed" << endl;
+        LOG("(List) HMAC verification failed");
         return -3;
     }
 
@@ -634,9 +630,9 @@ int Client::list() {
     uint8_t* plaintext = nullptr;
     int plaintext_size = 0;
     uint8_t command_code = generic_m2.decryptCiphertext(m_session_key, plaintext, plaintext_size);
-    // check if the command code is correct
+    // check if the command code is correct TODO: va tolto?
     if (command_code != FILE_LIST_SIZE){
-        cerr << " [-] (List) Unexpected packet" << endl;
+        LOG("(List) Unexpected packet");
         safeDelete(plaintext, ListM2::getSize());
         return -4;
     }
@@ -665,7 +661,7 @@ int Client::list() {
     // generic_m3.print();
     verification_res = generic_m3.verifyHMAC(m_hmac_key);
     if (!verification_res) {
-        cerr << "[-] (List) HMAC verification failed" << endl;
+        LOG("(List) HMAC verification failed");
         return -7;
     }
 
@@ -677,7 +673,7 @@ int Client::list() {
     command_code = generic_m3.decryptCiphertext(m_session_key, plaintext, plaintext_size);
     // check if the command code is correct
     if (command_code != FILE_LIST){
-        cerr << " [-] (List) Unexpected packet" << endl;
+        LOG("(List) Unexpected packet");
         safeDelete(plaintext, ListM3::getSize(m2.file_list_size));
         return -8;
     }
@@ -726,7 +722,7 @@ int Client::rename(string file_name, string new_file_name) {
     int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
     delete[] serialized_packet;
     if (res < 0) {
-        return -2;
+        return -1;
     }
 
     incrementCounter();
@@ -739,7 +735,7 @@ int Client::rename(string file_name, string new_file_name) {
     if (res < 0) {
         // TODO: errore + delete
         delete[] serialized_packet;
-        return -3;
+        return -2;
     }
 
     // deserialize the generic packet and verify the fingerprint
@@ -748,8 +744,8 @@ int Client::rename(string file_name, string new_file_name) {
     // generic_m2.print();
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
-        cerr << "[-] (Rename) HMAC verification failed" << endl;
-        return -4;
+        LOG("(Rename) HMAC verification failed");
+        return -3;
     }
 
     LOG("(Rename) Received valid M2 packet");
@@ -774,19 +770,19 @@ int Client::rename(string file_name, string new_file_name) {
     else if (m2.command_code == REQ_FAILED){
         switch(m2.error_code){
             case FILE_NOT_FOUND_ERROR:
-                cerr << "[-] (Rename) File not found" << endl;
+                cerr << "File not found" << endl;
                 break;
             case FILE_ALREADY_EXISTS_ERROR:
-                cerr << "[-] (Rename) File with the new file name already exists" << endl;
+                cerr << "File with the new file name already exists" << endl;
                 break;
             case RENAME_FAILED_ERROR:
-                cerr << "[-] (Rename) Rename operation failed" << endl;
+                cerr << "Rename operation failed" << endl;
                 break;
         }
-        return -1;
+        return -4;
     }
 
-    return -6;
+    return -5;
 }
 
 // ------------------------------------------------------------------------------
@@ -808,7 +804,7 @@ int Client::remove(string file_name) {
     int res = m_socket->send(serialized_packet, Generic::getSize(COMMAND_FIELD_PACKET_SIZE));
     delete[] serialized_packet;
     if (res < 0) {
-        return -2;
+        return -1;
     }
 
     incrementCounter();
@@ -821,7 +817,7 @@ int Client::remove(string file_name) {
     if (res < 0) {
         // TODO: errore + delete
         delete[] serialized_packet;
-        return -3;
+        return -2;
     }
 
     // deserialize the generic packet and verify the fingerprint
@@ -830,8 +826,8 @@ int Client::remove(string file_name) {
     // generic_m2.print();
     bool verification_res = generic_m2.verifyHMAC(m_hmac_key);
     if (!verification_res) {
-        cerr << "[-] (Remove) HMAC verification failed" << endl;
-        return -4;
+        LOG("(Remove) HMAC verification failed");
+        return -3;
     }
 
     LOG("(Remove) Received valid M2 packet");
@@ -856,16 +852,16 @@ int Client::remove(string file_name) {
     else if (m2.command_code == REQ_FAILED){
         switch(m2.error_code){
             case FILE_NOT_FOUND_ERROR:
-                cerr << "[-] (Remove) File not found" << endl;
+                cerr << "File not found" << endl;
                 break;
             case DELETE_FAILED_ERROR:
-                cerr << "[-] (Remove) Remove operation failed" << endl;
+                cerr << "Delete operation failed" << endl;
                 break;
         }
-        return -1;
+        return -4;
     }
 
-    return -6;
+    return -5;
 }
 
 // ------------------------------------------------------------------------------
@@ -895,24 +891,24 @@ int Client::run() {
     // sanitize username and password
     static char ok_chars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.@?!#*";
     if (strspn(m_username.c_str(), ok_chars) < strlen(m_username.c_str())) { 
-        cerr << "[-] (Run) Not valid username" << endl;
+        cerr << "Invalid username" << endl;
         return -1;
     }
     if (strspn(password.c_str(), ok_chars) < strlen(password.c_str())) { 
-        cerr << "[-] (Run) Not valid password" << endl;
-        return -1;
+        cerr << "Invalid password" << endl;
+        return -2;
     }
     if (m_username.length() >= USERNAME_SIZE) {
-        cerr << "[-] (Run) Username too long" << endl;
-        return -1;
+        cerr << "Username too long" << endl;
+        return -3;
     } 
 
     // open the private key PEM file
     string private_key_file = "resources/encrypted_keys/" + m_username + "_key.pem";
     BIO *bio = BIO_new_file(private_key_file.c_str(), "r");
     if (!bio) {
-        cerr << "[-] (Run) Username not registered" << endl;
-        return -2;
+        cerr << "No long term key associated to the username" << endl;
+        return -4;
     }
     
     // encrypt and save the long term private key
@@ -921,26 +917,28 @@ int Client::run() {
 
     // check if the password is correct
     if (!m_long_term_key) {
-        cerr << "[-] (Run) Wrong password" << endl;
-        return -3;
+        cerr << "Wrong password" << endl;
+        return -5;
     }
 
     // connect to the server
     try {
         m_socket = new CommunicationSocket(SERVER_IP, SERVER_PORT);
     } catch (const exception& e) {
-        cerr << "[-] (Run) Exception: " << e.what() << endl;
-        return -4;
+        LOG("(Run) Exception: " << e.what());
+        cerr << "Connection to the server failed" << endl;
+        return -6;
     }
 
     // ----------------------------------------------
 
     int res = login();
     if (res != 0) {
-        cerr << "[-] (Run) Login failed with error code " << res << endl;
-        return -1;
+        LOG("(Run) Login failed with error code " << res);
+        cerr << "Something went wrong" << endl;
+        return -7;
     }
-    cout << "[+] (Run) Login completed" << endl;
+    cout << "Login completed" << endl;
 
     try {
         while (1) {
@@ -952,11 +950,9 @@ int Client::run() {
             if (command == "list") {
                 res = list();
                 if (res < 0) {
-                    cerr << "[-] (Run) List failed with error code " << res << endl;
-                    return -1;
-                } 
-
-                cout << "[+] (Run) List completed" << endl;
+                    LOG("(Run) List failed with error code " << res);
+                    cerr << "Something went wrong" << endl;
+                }
             }
 
             else if (command == "download") {
@@ -968,24 +964,26 @@ int Client::run() {
                 // sanitize filename
                 res = FileManager::sanitizeFileName(file_name);
                 if (res == -1) {
-                    cerr << "[-] (Run) Invalid file name" << endl;
+                    cerr << "Invalid file name" << endl;
                     continue;
                 } else if (res == -2) {
-                    cerr << "[-] (Run) The file name can't be '.'" << endl;
+                    cerr << "The file name can't be '.'" << endl;
                     continue;
                 } else if (res == -3) {
-                    cerr << "[-] (Run) The file name can't be '..'" << endl;
+                    cerr << "The file name can't be '..'" << endl;
                     continue;
                 } else if (res == -4) {
-                    cerr << "[-] (Run) The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
+                    cerr << "The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
 
                 res = download(file_name);
                 if (res < 0) {
-                    cerr << "[-] (Run) Download failed with error code " << res << endl;
+                    LOG("(Run) Download failed with error code " << res);
+                    if (res < -1 && res != -5)
+                        cerr << "Something went wrong" << endl;
                 } else {
-                    cout << "[+] (Run) Download completed successfully" << endl;
+                    cout << "Download completed" << endl;
                 }
             }
 
@@ -998,26 +996,33 @@ int Client::run() {
                 // sanitize filename
                 res = FileManager::sanitizeFileName(file_name);
                 if (res == -1) {
-                    cerr << "[-] (Run) Invalid file name" << endl;
+                    cerr << "Invalid file name" << endl;
                     continue;
                 } else if (res == -2) {
-                    cerr << "[-] (Run) The file name can't be '.'" << endl;
+                    cerr << "The file name can't be '.'" << endl;
                     continue;
                 } else if (res == -3) {
-                    cerr << "[-] (Run) The file name can't be '..'" << endl;
+                    cerr << "The file name can't be '..'" << endl;
                     continue;
                 } else if (res == -4) {
-                    cerr << "[-] (Run) The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
+                    cerr << "The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
 
                 // check if the path isn't a regular file (folder, symlink, ecc...)
                 if (!filesystem::is_regular_file(filesystem::path(file_name))) {
-                    cerr << "[-] (Run) The file name doesn't correspond to a regular file" << endl;
+                    cerr << "The file name doesn't correspond to a regular file" << endl;
                     continue;
                 }
 
                 res = upload(file_name);
+                if (res < 0) {
+                    LOG("(Run) Upload failed with error code " << res);
+                    if (res < -3 && res != -7)
+                        cerr << "Something went wrong" << endl;
+                } else {
+                    cout << "Upload completed" << endl;
+                }
             }
 
             else if (command == "rename") {
@@ -1031,47 +1036,48 @@ int Client::run() {
                 // sanitize file_name
                 res = FileManager::sanitizeFileName(file_name);
                 if (res == -1) {
-                    cerr << "[-] (Run) Invalid file name" << endl;
+                    cerr << "Invalid file name" << endl;
                     continue;
                 } else if (res == -2) {
-                    cerr << "[-] (Run) The file name can't be '.'" << endl;
+                    cerr << "The file name can't be '.'" << endl;
                     continue;
                 } else if (res == -3) {
-                    cerr << "[-] (Run) The file name can't be '..'" << endl;
+                    cerr << "The file name can't be '..'" << endl;
                     continue;
                 } else if (res == -4) {
-                    cerr << "[-] (Run) The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
+                    cerr << "The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
                 
                 // sanitize new_file_name
                 res = FileManager::sanitizeFileName(new_file_name);
                 if (res == -1) {
-                    cerr << "[-] (Run) Invalid new file name" << endl;
+                    cerr << "Invalid new file name" << endl;
                     continue;
                 } else if (res == -2) {
-                    cerr << "[-] (Run) The new file name can't be '.'" << endl;
+                    cerr << "The new file name can't be '.'" << endl;
                     continue;
                 } else if (res == -3) {
-                    cerr << "[-] (Run) The new file name can't be '..'" << endl;
+                    cerr << "The new file name can't be '..'" << endl;
                     continue;
                 } else if (res == -4) {
-                    cerr << "[-] (Run) The new file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
+                    cerr << "The new file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
                 
                 if(file_name == new_file_name) {
-                    cerr << "[-] (Rename) File name and new file name can't be equal" << endl;
+                    cerr << "File name and new file name can't be equal" << endl;
                     continue;
                 }
 
                 res = rename(file_name, new_file_name);
-                if (res < -1) {
-                    cerr << "[-] (Run) Rename failed with error code " << res << endl;
-                    return -1;
+                if (res < 0) {
+                    LOG("(Run) Rename failed with error code " << res);
+                    if (res != -4)
+                        cerr << "Something went wrong" << endl;
+                } else {
+                    cout << "Rename completed" << endl;
                 }
-                else if (!res)
-                    cout << "[+] (Run) Rename completed" << endl;
             }
 
             else if (command == "delete") {
@@ -1083,36 +1089,38 @@ int Client::run() {
                 // sanitize file_name
                 res = FileManager::sanitizeFileName(file_name);
                 if (res == -1) {
-                    cerr << "[-] (Run) Invalid file name" << endl;
+                    cerr << "Invalid file name" << endl;
                     continue;
                 } else if (res == -2) {
-                    cerr << "[-] (Run) The file name can't be '.'" << endl;
+                    cerr << "The file name can't be '.'" << endl;
                     continue;
                 } else if (res == -3) {
-                    cerr << "[-] (Run) The file name can't be '..'" << endl;
+                    cerr << "The file name can't be '..'" << endl;
                     continue;
                 } else if (res == -4) {
-                    cerr << "[-] (Run) The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
+                    cerr << "The file name can't be longer than " << FILE_NAME_SIZE << " characters" << endl;
                     continue;
                 }
     
                 res = remove(file_name);
-                if (res < -1) {
-                    cerr << "[-] (Run) Remove failed with error code " << res << endl;
-                    return -1;
+                if (res < 0) {
+                    LOG("(Run) Delete failed with error code " << res);
+                    if (res != -4)
+                        cerr << "Something went wrong" << endl;
+                } else {
+                    cout << "Delete completed" << endl;
                 }
-                else if (!res)
-                    cout << "[+] (Run) Remove completed" << endl;
             }
 
             else if (command == "logout" || command == "exit") {
                 res = logout();
                 if (res < 0) {
-                    cerr << "[-] (Run) Logout failed with error code " << res << endl;
-                    return -1;
+                    LOG("(Run) Logout failed with error code " << res);
+                    cerr << "Something went wrong" << endl;
+                    continue;
                 } 
 
-                cout << "[+] (Run) Logout completed" << endl;
+                cout << "Logout completed" << endl;
 
                 if (command == "exit") 
                     return 1;
@@ -1132,24 +1140,25 @@ int Client::run() {
             } 
             
             else {
-                cerr << "[-] (Run) Not valid command" << endl;
+                cerr << "Invalid command" << endl;
             } 
         }
     } catch (int e) {
 
         if (e == -1) {
-            cerr << "[-] (Run) Renegotiation failed" << endl;
+            LOG("(Run) Renegotiation failed");
         } else if (e == -2) {
-            cerr << "[-] (Run) Replay attack detected" << endl;
+            LOG("(Run) Replay attack detected");
         } else if (e == -3) {
             logout();
-            cout << "[+] (Run) Client close" << endl;
+            LOG("(Run) Client close");
             return 1;
         } else if (e == -4) {
-            cerr << "[-] (Run) Socket closed unexpectedly" << endl;
+            LOG("(Run) Socket closed unexpectedly");
         }
 
-        return -1;
+        cerr << "Something went wrong" << endl;
+        return -9;
     }
 
     return 0;
