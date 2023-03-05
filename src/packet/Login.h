@@ -17,7 +17,7 @@ using namespace std;
 
 struct LoginM1 {
 
-    uint8_t ephemeral_key[1024];
+    uint8_t ephemeral_key[1024];    // 1024 is an upper bound, there is no fixed size for OpenSSL ephemeral key
     uint32_t ephemeral_key_size;
     char username[USERNAME_SIZE];
 
