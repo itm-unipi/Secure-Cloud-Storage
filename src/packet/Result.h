@@ -17,8 +17,8 @@ using namespace std;
 struct Result {
 
     uint8_t command_code;
-    uint8_t error_code;
     uint32_t counter;
+    uint8_t error_code;
 
     Result() {}
 
@@ -41,13 +41,13 @@ struct Result {
         memcpy(buffer, &command_code, sizeof(uint8_t));
         position += sizeof(uint8_t);
 
+        memcpy(buffer + position, &counter, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
         if (command_code == REQ_FAILED)
             memcpy(buffer + position, &error_code, sizeof(uint8_t));
         else
             RAND_bytes(buffer + position, sizeof(uint8_t));
-        position += sizeof(uint8_t);
-
-        memcpy(buffer + position, &counter, sizeof(uint32_t));
     
         return buffer;
     }
@@ -60,11 +60,11 @@ struct Result {
         memcpy(&result.command_code, buffer, sizeof(uint8_t));
         position += sizeof(uint8_t);
 
+        memcpy(&result.counter, buffer + position, sizeof(uint32_t));
+        position += sizeof(uint32_t);
+
         if (result.command_code == REQ_FAILED)
             memcpy(&result.error_code, buffer + position, sizeof(uint8_t));
-        position += sizeof(uint8_t);
-
-        memcpy(&result.counter, buffer + position, sizeof(uint32_t));
 
         return result;
     }
@@ -83,9 +83,9 @@ struct Result {
 
         cout << "--------- RESULT ----------" << endl;
         cout << "COMMAND CODE: " << printCommandCodeDescription(command_code) << endl;
+        cout << "COUNTER: " << counter << endl;
         if (command_code == REQ_FAILED)
             cout << "ERROR CODE: " << printErrorCodeDescription(error_code) << endl;
-        cout << "COUNTER: " << counter << endl;
         cout << "------------------------------" << endl;
     }
 };
