@@ -11,13 +11,16 @@
 #include "../client/Client.h"
 #include "../../resources/Config.h"
 
+#define EPHEMERAL_KEY_SIZE       1024   // 1024 is an upper bound, there is no fixed size for OpenSSL ephemeral key
+#define ENCRYPTED_SIGNATURE_SIZE 144    // 128 bytes (long term key size) + 16 bytes (padding block)
+
 using namespace std;
 
 // --------------------------------------- M1 ---------------------------------------
 
 struct LoginM1 {
 
-    uint8_t ephemeral_key[1024];    // 1024 is an upper bound, there is no fixed size for OpenSSL ephemeral key
+    uint8_t ephemeral_key[EPHEMERAL_KEY_SIZE];
     uint32_t ephemeral_key_size;
     char username[USERNAME_SIZE];
 
@@ -39,8 +42,8 @@ struct LoginM1 {
         uint8_t* buffer = new uint8_t[LoginM1::getSize()];
 
         size_t position = 0;
-        memcpy(buffer, ephemeral_key, 1024 * sizeof(uint8_t));
-        position += 1024 * sizeof(uint8_t);
+        memcpy(buffer, ephemeral_key, EPHEMERAL_KEY_SIZE * sizeof(uint8_t));
+        position += EPHEMERAL_KEY_SIZE * sizeof(uint8_t);
 
         uint32_t ephemeral_key_size_hton = htonl(ephemeral_key_size);
         memcpy(buffer + position, &ephemeral_key_size_hton, sizeof(uint32_t));
@@ -56,8 +59,8 @@ struct LoginM1 {
         LoginM1 loginM1;
 
         size_t position = 0;
-        memcpy(loginM1.ephemeral_key, buffer, 1024 * sizeof(uint8_t));
-        position += 1024 * sizeof(uint8_t);
+        memcpy(loginM1.ephemeral_key, buffer, EPHEMERAL_KEY_SIZE * sizeof(uint8_t));
+        position += EPHEMERAL_KEY_SIZE * sizeof(uint8_t);
 
         uint32_t ephemeral_key_size_hton = 0;
         memcpy(&ephemeral_key_size_hton, buffer + position, sizeof(uint32_t));
@@ -73,7 +76,7 @@ struct LoginM1 {
 
         int size = 0;
 
-        size += 1024 * sizeof(uint8_t);
+        size += EPHEMERAL_KEY_SIZE * sizeof(uint8_t);
         size += sizeof(uint32_t);
         size += USERNAME_SIZE * sizeof(char);
 
@@ -84,7 +87,7 @@ struct LoginM1 {
 
         cout << "---------- LOGIN M1 ----------" << endl;
         cout << "EPHEMERAL KEY:" << endl;
-        for (int i = 0; i < 1024; ++i)
+        for (int i = 0; i < EPHEMERAL_KEY_SIZE; ++i)
             cout << hex << ephemeral_key[i];
         cout << dec << endl;
         cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
@@ -142,10 +145,10 @@ struct LoginM2 {
 
 struct LoginM3 {
 
-    uint8_t ephemeral_key[1024];
+    uint8_t ephemeral_key[EPHEMERAL_KEY_SIZE];
     uint32_t ephemeral_key_size;
     uint8_t iv[AES_BLOCK_SIZE];
-    uint8_t encrypted_signature[144];
+    uint8_t encrypted_signature[ENCRYPTED_SIGNATURE_SIZE];
     uint8_t serialized_certificate[MAX_SERIALIZED_CERTIFICATE_SIZE];
     uint32_t serialized_certificate_size;
 
@@ -160,7 +163,7 @@ struct LoginM3 {
 
         this->ephemeral_key_size = (unsigned int)ephemeral_key_size;
 
-        memcpy(this->encrypted_signature, encrypted_signature, 144 * sizeof(uint8_t));
+        memcpy(this->encrypted_signature, encrypted_signature, ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t));
 
         memcpy(this->serialized_certificate, serialized_certificate, serialized_certificate_size);
         memset(this->serialized_certificate + serialized_certificate_size, 0, MAX_SERIALIZED_CERTIFICATE_SIZE - serialized_certificate_size);
@@ -173,8 +176,8 @@ struct LoginM3 {
         uint8_t* buffer = new uint8_t[LoginM3::getSize()];
 
         size_t position = 0;
-        memcpy(buffer, ephemeral_key, 1024 * sizeof(uint8_t));
-        position += 1024 * sizeof(uint8_t);
+        memcpy(buffer, ephemeral_key, EPHEMERAL_KEY_SIZE * sizeof(uint8_t));
+        position += EPHEMERAL_KEY_SIZE * sizeof(uint8_t);
 
         uint32_t ephemeral_key_size_hton = htonl(ephemeral_key_size);
         memcpy(buffer + position, &ephemeral_key_size_hton, sizeof(uint32_t));
@@ -183,8 +186,8 @@ struct LoginM3 {
         memcpy(buffer + position, iv, AES_BLOCK_SIZE * sizeof(uint8_t));
         position += AES_BLOCK_SIZE * sizeof(uint8_t);
 
-        memcpy(buffer + position, encrypted_signature, 144 * sizeof(uint8_t));
-        position += 144 * sizeof(uint8_t);
+        memcpy(buffer + position, encrypted_signature, ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t));
+        position += ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t);
 
         memcpy(buffer + position, serialized_certificate, MAX_SERIALIZED_CERTIFICATE_SIZE);
         position += MAX_SERIALIZED_CERTIFICATE_SIZE;
@@ -200,8 +203,8 @@ struct LoginM3 {
         LoginM3 loginM3;
 
         size_t position = 0;
-        memcpy(loginM3.ephemeral_key, buffer, 1024 * sizeof(uint8_t));
-        position += 1024 * sizeof(uint8_t);
+        memcpy(loginM3.ephemeral_key, buffer, EPHEMERAL_KEY_SIZE * sizeof(uint8_t));
+        position += EPHEMERAL_KEY_SIZE * sizeof(uint8_t);
 
         uint32_t ephemeral_key_size_hton = 0;
         memcpy(&ephemeral_key_size_hton, buffer + position, sizeof(uint32_t));
@@ -211,8 +214,8 @@ struct LoginM3 {
         memcpy(loginM3.iv, buffer + position, AES_BLOCK_SIZE * sizeof(uint8_t));
         position += AES_BLOCK_SIZE * sizeof(uint8_t);
 
-        memcpy(loginM3.encrypted_signature, buffer + position, 144 * sizeof(uint8_t));
-        position += 144 * sizeof(uint8_t);
+        memcpy(loginM3.encrypted_signature, buffer + position, ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t));
+        position += ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t);
 
         memcpy(loginM3.serialized_certificate, buffer + position, MAX_SERIALIZED_CERTIFICATE_SIZE);
         position += MAX_SERIALIZED_CERTIFICATE_SIZE;
@@ -228,10 +231,10 @@ struct LoginM3 {
 
         int size = 0;
 
-        size += 1024 * sizeof(uint8_t);
+        size += EPHEMERAL_KEY_SIZE * sizeof(uint8_t);
         size += sizeof(uint32_t);
         size += AES_BLOCK_SIZE * sizeof(uint8_t);
-        size += 144 * sizeof(uint8_t);
+        size += ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t);
         size += MAX_SERIALIZED_CERTIFICATE_SIZE * sizeof(uint8_t);
         size += sizeof(uint32_t);
 
@@ -242,7 +245,7 @@ struct LoginM3 {
 
         cout << "---------- LOGIN M3 ----------" << endl;
         cout << "EPHEMERAL KEY:" << endl;
-        for (int i = 0; i < 1024; ++i)
+        for (int i = 0; i < EPHEMERAL_KEY_SIZE; ++i)
             cout << hex << ephemeral_key[i];
         cout << dec << endl;
         cout << "EPHEMERAL KEY SIZE: " << ephemeral_key_size << endl;
@@ -251,7 +254,7 @@ struct LoginM3 {
             cout << hex << iv[i];
         cout << dec << endl;
         cout << "ENCRYPTED SIGNATURE:" << endl;
-        for (int i = 0; i < 144; ++i)
+        for (int i = 0; i < ENCRYPTED_SIGNATURE_SIZE; ++i)
             cout << hex << encrypted_signature[i];
         cout << dec << endl;
         cout << "SERIALIZED CERTIFICATE:" << endl;
@@ -268,14 +271,14 @@ struct LoginM3 {
 struct LoginM4 {
 
     uint8_t iv[AES_BLOCK_SIZE];
-    uint8_t encrypted_signature[144];           // 128 bytes (long term key size) + 16 bytes (padding block) 
+    uint8_t encrypted_signature[ENCRYPTED_SIGNATURE_SIZE]; 
 
     LoginM4() {}
 
     LoginM4(uint8_t* iv, uint8_t* encrypted_signature) {
         
         memcpy(this->iv, iv, AES_BLOCK_SIZE * sizeof(uint8_t));
-        memcpy(this->encrypted_signature, encrypted_signature, 144 * sizeof(uint8_t));
+        memcpy(this->encrypted_signature, encrypted_signature, ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t));
     }
 
     uint8_t* serialize() const {
@@ -286,7 +289,7 @@ struct LoginM4 {
         memcpy(buffer, iv, AES_BLOCK_SIZE * sizeof(uint8_t));
         position += AES_BLOCK_SIZE * sizeof(uint8_t);
 
-        memcpy(buffer + position, encrypted_signature, 144 * sizeof(uint8_t));
+        memcpy(buffer + position, encrypted_signature, ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t));
 
         return buffer;
     }
@@ -299,8 +302,8 @@ struct LoginM4 {
         memcpy(loginM4.iv, buffer, AES_BLOCK_SIZE * sizeof(uint8_t));
         position += AES_BLOCK_SIZE * sizeof(uint8_t);
 
-        memcpy(loginM4.encrypted_signature, buffer + position, 144 * sizeof(uint8_t));
-        position += 144 * sizeof(uint8_t);
+        memcpy(loginM4.encrypted_signature, buffer + position, ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t));
+        position += ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t);
 
         return loginM4;
     }
@@ -310,7 +313,7 @@ struct LoginM4 {
         int size = 0;
 
         size += AES_BLOCK_SIZE * sizeof(uint8_t);
-        size += 144 * sizeof(uint8_t);
+        size += ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t);
 
         return size;
     }
@@ -323,7 +326,7 @@ struct LoginM4 {
             cout << hex << iv[i];
         cout << dec << endl;
         cout << "ENCRYPTED SIGNATURE:" << endl;
-        for (int i = 0; i < 144; ++i)
+        for (int i = 0; i < ENCRYPTED_SIGNATURE_SIZE; ++i)
             cout << hex << encrypted_signature[i];
         cout << dec << endl;
         cout << "------------------------------" << endl;
