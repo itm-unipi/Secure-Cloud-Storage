@@ -1,5 +1,5 @@
 CC = g++
-LFLAGS = -Wall -pthread -lssl -lcrypto -std=c++17 -Wno-unknown-pragmas -Wno-deprecated-declarations
+LFLAGS = -Wall -pthread -lssl -lcrypto -lstdc++fs -std=c++17 -Wno-unknown-pragmas -Wno-deprecated-declarations
 CFLAGS = -Wall -c -std=c++17 -Wno-unknown-pragmas -Wno-deprecated-declarations
 
 all: server client
