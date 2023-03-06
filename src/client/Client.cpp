@@ -540,15 +540,15 @@ int Client::upload(string file_name) {
     safeDelete(chunk_buffer, chunk_size);
 
     // 4.) receive the M4 packet
-    serialized_packet = new uint8_t[Generic::getSize(UploadMn::getSize())];
-    res = m_socket->receive(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    serialized_packet = new uint8_t[Generic::getSize(Result::getSize())];
+    res = m_socket->receive(serialized_packet, Generic::getSize(Result::getSize()));
     if (res < 0) {
         delete[] serialized_packet;
         return -9;
     }
 
     // deserialize the generic packet and verify the fingerprint
-    Generic generic_mn = Generic::deserialize(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    Generic generic_mn = Generic::deserialize(serialized_packet, Generic::getSize(Result::getSize()));
     delete[] serialized_packet;
     // generic_mn.print();
     verification_res = generic_mn.verifyHMAC(m_hmac_key);
@@ -561,9 +561,9 @@ int Client::upload(string file_name) {
     plaintext = nullptr;
     plaintext_size = 0;
     generic_mn.decryptCiphertext(m_session_key, plaintext, plaintext_size);
-    UploadMn mn = UploadMn::deserialize(plaintext);
+    Result mn = Result::deserialize(plaintext);
     // mn.print();
-    safeDelete(plaintext, UploadMn::getSize());
+    safeDelete(plaintext, Result::getSize());
 
     // check if the counter is correct
     if (mn.counter != m_counter)
@@ -572,8 +572,10 @@ int Client::upload(string file_name) {
     incrementCounter();
 
     // return the status
-    if (!mn.status)
+    if (mn.command_code == REQ_FAILED) {
+        LOG("(Upload) Failed with error code " << printErrorCodeDescription(mn.error_code));
         return -11;
+    }
 
     return 0;
 }

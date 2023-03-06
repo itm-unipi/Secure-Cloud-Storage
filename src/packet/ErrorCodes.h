@@ -5,11 +5,13 @@
 #include <cstdint>
 using namespace std;
 
-#define NO_ERROR                  0
-#define FILE_NOT_FOUND_ERROR      1
-#define FILE_ALREADY_EXISTS_ERROR 2
-#define RENAME_FAILED_ERROR       3
-#define DELETE_FAILED_ERROR       4
+#define NO_ERROR                    0
+#define FILE_NOT_FOUND_ERROR        1
+#define FILE_ALREADY_EXISTS_ERROR   2
+#define RENAME_FAILED_ERROR         3
+#define DELETE_FAILED_ERROR         4
+#define RECEIVE_ERROR               5
+#define HMAC_VALIDATION_ERROR       6
 
 string printErrorCodeDescription(uint8_t code) {
 

@@ -431,6 +431,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
 
     // receive all file chunks
     bool upload_failed = false;
+    uint8_t error_code = 0;
     for (size_t i = 0; i < file.getNumOfChunks(); ++i) {
         // get the chunk size
         if (i == file.getNumOfChunks() - 1)
@@ -442,6 +443,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
         if (res < 0) {
             delete[] serialized_packet;
             upload_failed = true;
+            error_code = RECEIVE_ERROR;
             incrementCounter();
             continue;
         }
@@ -454,6 +456,7 @@ int Worker::uploadRequest(uint8_t* plaintext) {
         if (!verification_res) {
             cerr << "[-] (UploadRequest) HMAC verification failed" << endl;
             upload_failed = true;
+            error_code = HMAC_VALIDATION_ERROR;
             incrementCounter();
             continue;
         }
@@ -481,18 +484,22 @@ int Worker::uploadRequest(uint8_t* plaintext) {
     }
 
     // create the Mn packet
-    UploadMn mn(m_counter, !upload_failed);
+    Result mn;
+    if (upload_failed)
+        mn = Result(m_counter, false, error_code);
+    else
+        mn = Result(m_counter, true);
     // mn.print();
     serialized_packet = mn.serialize();
 
     // create generic packet
-    Generic generic_mn(m_session_key, m_hmac_key, serialized_packet, UploadMn::getSize());
-    safeDelete(serialized_packet, UploadMn::getSize());
+    Generic generic_mn(m_session_key, m_hmac_key, serialized_packet, Result::getSize());
+    safeDelete(serialized_packet, Result::getSize());
     // generic_mn.print();
 
     // 4.) send generic packet
     serialized_packet = generic_mn.serialize();
-    res = m_socket->send(serialized_packet, Generic::getSize(UploadMn::getSize()));
+    res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
     delete[] serialized_packet;
     if (res < 0) {
         return -3;
