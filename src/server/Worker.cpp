@@ -85,7 +85,7 @@ int Worker::loginRequest() {
     }
 
     // extract the server private key
-    file_name = "resources/private_keys/server_key.pem";
+    file_name = "resources/private_keys/Server_key.pem";
     bp = BIO_new_file(file_name.c_str(), "r");
     if (!bp) {
         return -4;
@@ -211,7 +211,7 @@ int Worker::loginRequest() {
     int decrypted_signature_size = 0;
     AesCbc* decryptor = new AesCbc(DECRYPT, m_session_key);
     iv = m4.iv;
-    decryptor->run(m4.encrypted_signature, 144 * sizeof(uint8_t), decrypted_signature, decrypted_signature_size, iv);
+    decryptor->run(m4.encrypted_signature, ENCRYPTED_SIGNATURE_SIZE * sizeof(uint8_t), decrypted_signature, decrypted_signature_size, iv);
     delete decryptor;
 
     // verify the signature

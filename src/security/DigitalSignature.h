@@ -3,8 +3,6 @@
 
 #include <openssl/evp.h>
 
-#define SIGNATURE_SIZE 512
-
 class DigitalSignature {
 
 public:
