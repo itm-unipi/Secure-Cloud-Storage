@@ -101,7 +101,7 @@ bool FileManager::exists(string file_name) {
 int FileManager::sanitizeFileName(string file_name) {
 
     // compare string with the characters in the whitelist
-    char whitelist[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.@?!#*";
+    char whitelist[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_-.@?!#";
     if (strspn(file_name.c_str(), whitelist) < strlen(file_name.c_str()))
         return -1;
 
