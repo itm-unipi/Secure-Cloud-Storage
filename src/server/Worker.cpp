@@ -532,7 +532,7 @@ int Worker::listRequest(uint8_t* plaintext) {
 
     incrementCounter();
 
-    // get file names of the
+    // get file names of the user's storage
     string files = "";
     string path = "data/" + m_username;
     filesystem::directory_entry dir(path);
@@ -540,14 +540,9 @@ int Worker::listRequest(uint8_t* plaintext) {
     if (dir.is_directory()){
         for (const auto& file : filesystem::directory_iterator(path)){
 
-            ifstream input(file.path());
-            if (input.is_open()){
-                // get file name
-                string file_name = file.path();
-                file_name.replace(0, path.length() + 1, "");
-                files = files + file_name + "|";
-                input.close();
-            }
+            // get file name
+            string file_name = file.path().filename().string();
+            files = files + file_name + "|";
         }
         
         if (files.length() > 0)
