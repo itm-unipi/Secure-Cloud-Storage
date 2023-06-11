@@ -292,19 +292,20 @@ int Worker::downloadRequest(uint8_t* plaintext) {
 
     incrementCounter();
 
-    // check if the requested file exists in the user storage
+    // check if the requested file exists in the user storage and it is a regular file
     string file_path = "data/" + m_username + "/" + string(m1.file_name);
     LOG("(DownloadRequest) Searching for " + file_path);
     bool file_found = FileManager::exists(file_path);
+    bool file_is_regular = filesystem::is_regular_file(filesystem::path(file_path)) && !filesystem::is_symlink(filesystem::path(file_path));
 
     size_t file_size = 0;
     FileManager* requested_file = nullptr;
-    if (file_found) {
+    if (file_found && file_is_regular) {
         requested_file = new FileManager(file_path, READ);
         file_size = requested_file->getFileSize();
     }
 
-    DownloadM2 m2(m_counter, file_found, file_size);
+    DownloadM2 m2(m_counter, file_found && file_is_regular, file_size);
     uint8_t* serialized_packet = m2.serialize();
 
     Generic generic_m2(m_session_key, m_hmac_key, serialized_packet, DownloadM2::getSize());

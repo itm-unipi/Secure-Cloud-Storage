@@ -1003,7 +1003,7 @@ int Client::run() {
                     continue;
                 }
 
-                // check if the path isn't a regular file (folder, symlink, ecc...)
+                // check if the path isn't a regular file
                 if (!filesystem::is_regular_file(filesystem::path(file_name))) {
                     cerr << "The file name doesn't correspond to a regular file" << endl;
                     continue;
