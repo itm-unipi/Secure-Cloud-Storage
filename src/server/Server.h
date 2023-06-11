@@ -19,7 +19,7 @@ public:
 
     int run(bool verbose);
 
-    static Server* getInstace() {
+    static Server* getInstance() {
         if (!m_instance)
             m_instance = new Server();
         return m_instance;

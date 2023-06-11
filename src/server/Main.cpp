@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     signal(SIGINT, serverSignalHandler);
     signal(SIGPIPE, serverSignalHandler);
     
-    Server::getInstace()->run(verbose);
+    Server::getInstance()->run(verbose);
     Server::closeInstance();
 
     return 0;
