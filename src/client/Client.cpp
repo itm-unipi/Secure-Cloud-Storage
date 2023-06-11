@@ -131,7 +131,7 @@ int Client::login() {
     unsigned int keys_size;
     Sha512::generate(shared_secret, shared_secret_size, keys, keys_size);
     memcpy(m_session_key, keys, AES_KEY_SIZE * sizeof(unsigned char));
-    memcpy(m_hmac_key, keys + (HMAC_DIGEST_SIZE * sizeof(unsigned char)), HMAC_DIGEST_SIZE * sizeof(unsigned char));
+    memcpy(m_hmac_key, keys + (AES_KEY_SIZE * sizeof(unsigned char)), HMAC_DIGEST_SIZE * sizeof(unsigned char));
     safeDelete(shared_secret, shared_secret_size);
     delete[] keys;
 
