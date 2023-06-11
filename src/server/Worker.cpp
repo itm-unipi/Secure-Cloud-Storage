@@ -31,6 +31,12 @@ Worker::Worker(CommunicationSocket* socket, bool verbose) {
 Worker::~Worker() {
     delete m_socket;
 
+    // clean session key and hmac key
+    #pragma optimize("", off)
+    memset(m_session_key, 0, sizeof(m_session_key));
+    memset(m_hmac_key, 0, sizeof(m_hmac_key));
+    #pragma optimize("", on)
+
     cout << "[+] (Server) Worker closed" << endl;
 }
 
@@ -256,6 +262,14 @@ int Worker::logoutRequest(uint8_t* plaintext) {
     safeDelete(serialized_packet, Result::getSize());
     // generic_m2.print();
 
+    // delete session key and hmac key
+    #pragma optimize("", off)
+    memset(m_session_key, 0, sizeof(m_session_key));
+    memset(m_hmac_key, 0, sizeof(m_hmac_key));
+    #pragma optimize("", on)
+
+    LOG("(LogoutRequest) Deleted session key and HMAC key");
+
     // 2.) send generic packet
     serialized_packet = generic_m2.serialize();
     int res = m_socket->send(serialized_packet, Generic::getSize(Result::getSize()));
@@ -265,14 +279,6 @@ int Worker::logoutRequest(uint8_t* plaintext) {
     }
 
     LOG("(LogoutRequest) Sent result packet");
-
-    // delete session key and hmac key
-    #pragma optimize("", off)
-    memset(m_session_key, 0, sizeof(m_session_key));
-    memset(m_hmac_key, 0, sizeof(m_hmac_key));
-    #pragma optimize("", on)
-
-    LOG("(LogoutRequest) Deleted session key and HMAC key");
 
     return 0;
 }
