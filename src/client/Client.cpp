@@ -895,7 +895,8 @@ int Client::run() {
     string private_key_file = "resources/encrypted_keys/" + m_username + "_key.pem";
     BIO *bio = BIO_new_file(private_key_file.c_str(), "r");
     if (!bio) {
-        cerr << "No long term key associated to the username" << endl;
+        cerr << "Username or password wrong" << endl;
+        LOG("No long term key associated to the username");
         return -4;
     }
     
@@ -905,7 +906,8 @@ int Client::run() {
 
     // check if the password is correct
     if (!m_long_term_key) {
-        cerr << "Wrong password" << endl;
+        cerr << "Username or password wrong" << endl;
+        LOG("Wrong password");
         return -5;
     }
 
